@@ -23,6 +23,16 @@ type FilterResponse = {
 
 const BASE = "https://api.todoist.com/api/v1";
 
+export async function closeTask(token: string, taskId: string): Promise<void> {
+  const res = await fetch(`${BASE}/tasks/${encodeURIComponent(taskId)}/close`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`Todoist close ${res.status}: ${await res.text()}`);
+  }
+}
+
 export async function fetchTasksByFilter(
   token: string,
   query: string,

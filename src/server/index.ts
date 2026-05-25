@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import auth from "./auth";
 import { sessionMiddleware, requireSession } from "./session";
-import { fetchTasksByFilter, bucketTasks } from "./todoist";
+import { fetchTasksByFilter, bucketTasks, closeTask } from "./todoist";
 import { todayKeyInTz, addDaysToKey } from "./dates";
 import {
   getValidGoogleAccessToken,
@@ -70,6 +70,17 @@ app.get("/api/now", requireSession, async (c) => {
       return c.json({ error: "google_reauth_needed" }, 401);
     }
     throw e;
+  }
+});
+
+app.post("/api/tasks/:id/close", requireSession, async (c) => {
+  const id = c.req.param("id");
+  if (!id) return c.json({ error: "missing_id" }, 400);
+  try {
+    await closeTask(c.env.TODOIST_API_TOKEN, id);
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: String(e) }, 502);
   }
 });
 

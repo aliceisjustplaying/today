@@ -4,8 +4,8 @@
   "description": "The Now layer above Todoist + Google Calendar",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fdfaf4",
-  "theme_color": "#d97757",
+  "background_color": "#ffffff",
+  "theme_color": "#FF4F3E",
   "icons": [
     {
       "src": "/favicon.svg",

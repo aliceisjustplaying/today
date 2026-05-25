@@ -15,6 +15,7 @@ export function SignedIn({ me }: { me: Me }) {
   const [now, setNow] = useState<NowState | null>(null);
   const [tasks, setTasks] = useState<TasksResponse | null>(null);
   const [events, setEvents] = useState<EventsResponse | null>(null);
+  const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   const loadNow = useCallback(async () => {
@@ -83,6 +84,32 @@ export function SignedIn({ me }: { me: Me }) {
     [loadNow],
   );
 
+  const onCompleteTask = useCallback(
+    async (id: string) => {
+      setCompleting((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      try {
+        const r = await fetch(`/api/tasks/${encodeURIComponent(id)}/close`, {
+          method: "POST",
+        });
+        if (!r.ok) throw new Error(`close ${r.status}`);
+        await loadTasks();
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setCompleting((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [loadTasks],
+  );
+
   const handle = me.email.split("@")[0] ?? "you";
 
   return (
@@ -102,9 +129,9 @@ export function SignedIn({ me }: { me: Me }) {
       </header>
 
       <Now state={now} onBodyStateChange={onBodyStateChange} />
-      <Today tasks={tasks} />
+      <Today tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Events events={events} />
-      <Upcoming tasks={tasks} />
+      <Upcoming tasks={tasks} completing={completing} onComplete={onCompleteTask} />
 
       {error && <div className="error-toast">{error}</div>}
     </main>

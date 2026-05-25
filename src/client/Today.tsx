@@ -1,6 +1,12 @@
 import type { TasksResponse, TodoistTask } from "./types";
 
-export function Today({ tasks }: { tasks: TasksResponse | null }) {
+type Props = {
+  tasks: TasksResponse | null;
+  completing: Set<string>;
+  onComplete: (id: string) => void;
+};
+
+export function Today({ tasks, completing, onComplete }: Props) {
   if (!tasks) return null;
   const { overdue, today } = tasks;
   if (overdue.length === 0 && today.length === 0) return null;
@@ -15,7 +21,12 @@ export function Today({ tasks }: { tasks: TasksResponse | null }) {
           </h3>
           <ul className="task-list">
             {overdue.map((t) => (
-              <TaskItem key={t.id} task={t} />
+              <TaskItem
+                key={t.id}
+                task={t}
+                completing={completing.has(t.id)}
+                onComplete={onComplete}
+              />
             ))}
           </ul>
         </div>
@@ -27,7 +38,12 @@ export function Today({ tasks }: { tasks: TasksResponse | null }) {
           </h3>
           <ul className="task-list">
             {today.map((t) => (
-              <TaskItem key={t.id} task={t} />
+              <TaskItem
+                key={t.id}
+                task={t}
+                completing={completing.has(t.id)}
+                onComplete={onComplete}
+              />
             ))}
           </ul>
         </div>
@@ -36,12 +52,25 @@ export function Today({ tasks }: { tasks: TasksResponse | null }) {
   );
 }
 
-function TaskItem({ task }: { task: TodoistTask }) {
+function TaskItem({
+  task,
+  completing,
+  onComplete,
+}: {
+  task: TodoistTask;
+  completing: boolean;
+  onComplete: (id: string) => void;
+}) {
   return (
-    <li className="task">
-      <span
-        className={`priority-dot priority-${task.priority}`}
-        aria-label={`priority ${task.priority}`}
+    <li className={`task ${completing ? "task--completing" : ""}`}>
+      <button
+        type="button"
+        className="task-check"
+        data-priority={task.priority}
+        data-completing={completing ? "true" : undefined}
+        onClick={() => onComplete(task.id)}
+        aria-label={`mark "${task.content}" as done`}
+        disabled={completing}
       />
       <div className="task-body">
         <div className="task-content">{task.content}</div>

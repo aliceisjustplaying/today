@@ -1,6 +1,12 @@
 import type { TasksResponse, TodoistTask } from "./types";
 import { formatDateShort } from "./format";
 
+type Props = {
+  tasks: TasksResponse | null;
+  completing: Set<string>;
+  onComplete: (id: string) => void;
+};
+
 function groupByDate(tasks: TodoistTask[]): Map<string, TodoistTask[]> {
   const m = new Map<string, TodoistTask[]>();
   for (const t of tasks) {
@@ -13,7 +19,7 @@ function groupByDate(tasks: TodoistTask[]): Map<string, TodoistTask[]> {
   return m;
 }
 
-export function Upcoming({ tasks }: { tasks: TasksResponse | null }) {
+export function Upcoming({ tasks, completing, onComplete }: Props) {
   if (!tasks || tasks.upcoming.length === 0) return null;
   const grouped = groupByDate(tasks.upcoming);
 
@@ -25,10 +31,18 @@ export function Upcoming({ tasks }: { tasks: TasksResponse | null }) {
           <h3 className="day-label">{formatDateShort(dateKey)}</h3>
           <ul className="task-list">
             {items.map((t) => (
-              <li key={t.id} className="task">
-                <span
-                  className={`priority-dot priority-${t.priority}`}
-                  aria-label={`priority ${t.priority}`}
+              <li
+                key={t.id}
+                className={`task ${completing.has(t.id) ? "task--completing" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="task-check"
+                  data-priority={t.priority}
+                  data-completing={completing.has(t.id) ? "true" : undefined}
+                  onClick={() => onComplete(t.id)}
+                  aria-label={`mark "${t.content}" as done`}
+                  disabled={completing.has(t.id)}
                 />
                 <div className="task-body">
                   <div className="task-content">{t.content}</div>
