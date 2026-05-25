@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
-  plugins: [react(), cloudflare()],
+  plugins: [react(), cloudflare({ tunnel: { autoStart: true } })],
   server: {
     host: "0.0.0.0",
     port: 8787,
