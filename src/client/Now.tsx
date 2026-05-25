@@ -11,7 +11,7 @@ export function Now({ state, onBodyStateChange }: Props) {
   if (!state) {
     return (
       <section className="now now--loading" aria-busy="true">
-        <div className="now-header">
+        <div className="now-head">
           <div className="now-time">--:--</div>
           <div className="now-date">loading…</div>
         </div>
@@ -24,22 +24,29 @@ export function Now({ state, onBodyStateChange }: Props) {
 
   return (
     <section className="now">
-      <div className="now-header">
+      <div className="now-head">
         <div className="now-time">{formatTime(currentTime)}</div>
         <div className="now-date">{formatDateLong(currentTime)}</div>
       </div>
 
       {!anchor && (
         <div className="now-empty">
-          <p className="now-empty-line">No anchor today.</p>
-          <p className="now-empty-sub">Free time. Don't waste it. Don't over-fill it.</p>
+          <span className="now-empty-line">No anchor today.</span>{" "}
+          <span className="now-empty-sub">free time.</span>
         </div>
       )}
 
       {anchor && (
         <>
           <div className="now-anchor">
-            <div className="now-anchor-label">Next</div>
+            <div className="now-anchor-titlerow">
+              <span className="now-anchor-label">Next</span>
+              {timing && (
+                <span className="now-anchor-remaining">
+                  in {formatRemaining(timing.timeRemainingMinutes)}
+                </span>
+              )}
+            </div>
             <h2 className="now-anchor-title">{anchor.title}</h2>
             <div className="now-anchor-meta">
               <span className="now-anchor-time">{formatTime(anchor.start)}</span>
@@ -48,35 +55,22 @@ export function Now({ state, onBodyStateChange }: Props) {
               )}
               {anchor.isVirtual && <span className="now-anchor-virtual">virtual</span>}
             </div>
-            {timing && (
-              <div className="now-anchor-remaining">
-                in {formatRemaining(timing.timeRemainingMinutes)}
-              </div>
-            )}
           </div>
 
           {hasTravel && travel && (
             <div className="now-travel">
               {travel.defaultMinutes != null && timing?.leaveByDefault && (
                 <div className="travel-row travel-row--default">
-                  <div className="travel-mode">{travel.defaultMode.toLowerCase()}</div>
-                  <div className="travel-value">
-                    <span className="travel-minutes">{travel.defaultMinutes} min</span>
-                    <span className="travel-leaveby">
-                      leave by {formatTime(timing.leaveByDefault)}
-                    </span>
-                  </div>
+                  <span className="travel-mode">{travel.defaultMode.toLowerCase()}</span>
+                  <span className="travel-minutes">{travel.defaultMinutes}m</span>
+                  <span className="travel-leaveby">leave {formatTime(timing.leaveByDefault)}</span>
                 </div>
               )}
               {travel.rescueMinutes != null && timing?.leaveByRescue && (
                 <div className="travel-row travel-row--rescue">
-                  <div className="travel-mode">{travel.rescueMode.toLowerCase()}</div>
-                  <div className="travel-value">
-                    <span className="travel-minutes">{travel.rescueMinutes} min</span>
-                    <span className="travel-leaveby">
-                      leave by {formatTime(timing.leaveByRescue)}
-                    </span>
-                  </div>
+                  <span className="travel-mode">{travel.rescueMode.toLowerCase()}</span>
+                  <span className="travel-minutes">{travel.rescueMinutes}m</span>
+                  <span className="travel-leaveby">leave {formatTime(timing.leaveByRescue)}</span>
                 </div>
               )}
             </div>
@@ -84,17 +78,15 @@ export function Now({ state, onBodyStateChange }: Props) {
 
           {!hasTravel && !anchor.isVirtual && anchor.location && (
             <div className="now-travel-missing">
-              {travelError
-                ? `Travel lookup failed: ${travelError}`
-                : "No travel info — Routes returned no result for this location."}
+              {travelError ? `travel: ${travelError}` : "no travel info"}
             </div>
           )}
 
           {timing?.prepStart && (
             <div className="now-prep">
-              <div className="now-prep-label">Prep</div>
-              <div className="now-prep-time">{formatTime(timing.prepStart)}</div>
-              <div className="now-prep-mins">{timing.prepRequiredMinutes} min</div>
+              <span className="now-prep-label">prep</span>
+              <span className="now-prep-time">{formatTime(timing.prepStart)}</span>
+              <span className="now-prep-mins">· {timing.prepRequiredMinutes}m needed</span>
             </div>
           )}
         </>

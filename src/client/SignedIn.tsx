@@ -129,8 +129,8 @@ export function SignedIn({ me }: { me: Me }) {
       </header>
 
       <Now state={now} onBodyStateChange={onBodyStateChange} />
-      <Today tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Events events={events} />
+      <Today tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Upcoming tasks={tasks} completing={completing} onComplete={onCompleteTask} />
 
       {error && <div className="error-toast">{error}</div>}

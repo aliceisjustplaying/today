@@ -1,12 +1,12 @@
 import type { BodyState, BodyStateUpdate, PrepStep } from "./types";
 
-const PILL_LABELS: Record<string, string> = {
-  eaten: "eaten",
+const SHORT_LABEL: Record<string, string> = {
+  eaten: "ate",
   showered: "showered",
   shaved: "shaved",
   dressed: "dressed",
   packed: "packed",
-  runningLate: "running late",
+  runningLate: "late",
 };
 
 type Props = {
@@ -26,8 +26,8 @@ export function BodyPills({ state, prepSteps, onChange }: Props) {
           onClick={() => onChange({ [step.key]: !step.done })}
           aria-pressed={step.done}
         >
-          <span className="pill-label">{PILL_LABELS[step.key]}</span>
-          <span className="pill-mins">{step.minutes}m</span>
+          <span className="pill-label">{SHORT_LABEL[step.key]}</span>
+          <span className="pill-mins">{step.minutes}</span>
         </button>
       ))}
       <button
@@ -36,7 +36,7 @@ export function BodyPills({ state, prepSteps, onChange }: Props) {
         onClick={() => onChange({ runningLate: !state.runningLate })}
         aria-pressed={state.runningLate}
       >
-        <span className="pill-label">{PILL_LABELS.runningLate}</span>
+        <span className="pill-label">{SHORT_LABEL.runningLate}</span>
       </button>
     </div>
   );
