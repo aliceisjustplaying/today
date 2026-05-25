@@ -10,6 +10,7 @@
     "build": "vite build",
     "deploy": "vite build && wrangler deploy",
     "preview": "vite preview",
+    "tunnel": "concurrently -k -n web,cf -c cyan,magenta \"bun run dev\" \"HOME=/tmp/clean-cloudflared cloudflared tunnel --protocol http2 --url http://localhost:8787\"",
     "typecheck": "tsgo --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply today --local",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.38.0",
     "@types/react": "19.2.15",
+    "concurrently": "9.2.1",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "drizzle-kit": "0.31.10",
