@@ -45,7 +45,22 @@ export async function computeTravelMinutes(opts: {
     throw new Error(`Routes ${res.status}: ${await res.text()}`);
   }
 
-  const data = (await res.json()) as RouteMatrixElement[];
+  const raw = (await res.json()) as unknown;
+  const data = Array.isArray(raw) ? (raw as RouteMatrixElement[]) : [];
+
+  // If the API returned an error envelope (e.g. BILLING_DISABLED, INVALID_ARGUMENT),
+  // surface it so it doesn't get silently swallowed as "no route".
+  const errish = raw as { error?: { code?: number; status?: string; message?: string } };
+  if (!Array.isArray(raw) && errish.error) {
+    throw new Error(`Routes ${errish.error.code} ${errish.error.status}: ${errish.error.message}`);
+  }
+  if (Array.isArray(raw)) {
+    const wrappedError = (raw[0] as { error?: { code?: number; status?: string; message?: string } })?.error;
+    if (wrappedError) {
+      throw new Error(`Routes ${wrappedError.code} ${wrappedError.status}: ${wrappedError.message}`);
+    }
+  }
+
   const item = data[0];
   if (!item?.duration) return null;
   if (item.condition && item.condition !== "ROUTE_EXISTS") return null;

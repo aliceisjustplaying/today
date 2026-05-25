@@ -42,6 +42,7 @@ export type NowState = {
   } | null;
   bodyState: BodyState;
   prepSteps: PrepStep[];
+  travelError: string | null;
 };
 
 export type TodoistTask = {

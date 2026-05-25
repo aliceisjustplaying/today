@@ -19,7 +19,7 @@ export function Now({ state, onBodyStateChange }: Props) {
     );
   }
 
-  const { currentTime, anchor, travel, timing, bodyState, prepSteps } = state;
+  const { currentTime, anchor, travel, timing, bodyState, prepSteps, travelError } = state;
   const hasTravel = travel && (travel.defaultMinutes != null || travel.rescueMinutes != null);
 
   return (
@@ -84,7 +84,9 @@ export function Now({ state, onBodyStateChange }: Props) {
 
           {!hasTravel && !anchor.isVirtual && anchor.location && (
             <div className="now-travel-missing">
-              No travel info — Routes lookup returned nothing for this location.
+              {travelError
+                ? `Travel lookup failed: ${travelError}`
+                : "No travel info — Routes returned no result for this location."}
             </div>
           )}
 

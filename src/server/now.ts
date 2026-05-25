@@ -103,6 +103,7 @@ export type NowState = {
   timing: NowTiming | null;
   bodyState: BodyStateRow;
   prepSteps: { key: PrepKey; minutes: number; done: boolean }[];
+  travelError: string | null;
 };
 
 function anchorEndIso(e: CalendarEvent): string | null {
@@ -146,6 +147,7 @@ export async function computeNowState(
       timing: null,
       bodyState: bs,
       prepSteps,
+      travelError: null,
     };
   }
 
@@ -165,22 +167,25 @@ export async function computeNowState(
   const rescueMode = (env.TRANSPORT_RESCUE as TravelMode) ?? "DRIVE";
 
   let travel: NowTravel | null = null;
+  let travelError: string | null = null;
   if (!virtual && location && env.HOME_ADDRESS) {
+    const tryMode = async (mode: TravelMode) => {
+      try {
+        return await computeTravelMinutes({
+          apiKey: env.GOOGLE_API_KEY,
+          origin: env.HOME_ADDRESS,
+          destination: location,
+          mode,
+          departureTime: now,
+        });
+      } catch (e) {
+        if (!travelError) travelError = (e as Error).message;
+        return null;
+      }
+    };
     const [defaultMinutes, rescueMinutes] = await Promise.all([
-      computeTravelMinutes({
-        apiKey: env.GOOGLE_API_KEY,
-        origin: env.HOME_ADDRESS,
-        destination: location,
-        mode: defaultMode,
-        departureTime: now,
-      }).catch(() => null),
-      computeTravelMinutes({
-        apiKey: env.GOOGLE_API_KEY,
-        origin: env.HOME_ADDRESS,
-        destination: location,
-        mode: rescueMode,
-        departureTime: now,
-      }).catch(() => null),
+      tryMode(defaultMode),
+      tryMode(rescueMode),
     ]);
     travel = { defaultMode, defaultMinutes, rescueMode, rescueMinutes };
   }
@@ -216,6 +221,7 @@ export async function computeNowState(
     },
     bodyState: bs,
     prepSteps,
+    travelError,
   };
 }
 
