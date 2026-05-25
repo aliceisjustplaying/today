@@ -1,7 +1,13 @@
+import { useState } from "react";
 import type { CalendarEvent, EventsResponse } from "./types";
-import { weekdayLabel } from "./format";
 
-function eventStart(e: CalendarEvent): string {
+function eventStartIso(e: CalendarEvent): string {
+  if (e.start && "dateTime" in e.start) return e.start.dateTime;
+  if (e.start && "date" in e.start) return e.start.date;
+  return new Date().toISOString();
+}
+
+function eventStartTime(e: CalendarEvent): string {
   if (e.start && "dateTime" in e.start) {
     return new Date(e.start.dateTime).toLocaleTimeString("en-GB", {
       hour: "2-digit",
@@ -13,40 +19,95 @@ function eventStart(e: CalendarEvent): string {
   return "—";
 }
 
-function eventDay(e: CalendarEvent): string {
-  if (e.start && "dateTime" in e.start) return weekdayLabel(e.start.dateTime);
-  if (e.start && "date" in e.start) return weekdayLabel(e.start.date);
-  return "";
+function dateKey(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA");
+}
+
+function todayKey(): string {
+  return new Date().toLocaleDateString("en-CA");
+}
+
+function tomorrowKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toLocaleDateString("en-CA");
+}
+
+function EventRow({ e }: { e: CalendarEvent }) {
+  return (
+    <li className="event">
+      <span className="event-time">{eventStartTime(e)}</span>
+      <span className="event-title">{e.summary ?? "(no title)"}</span>
+      {e.location && <span className="event-loc">{e.location}</span>}
+    </li>
+  );
 }
 
 export function Events({ events }: { events: EventsResponse | null }) {
-  if (!events || events.events.length === 0) return null;
+  const [tomorrowOpen, setTomorrowOpen] = useState(false);
 
-  const grouped = new Map<string, CalendarEvent[]>();
+  if (!events) return null;
+
+  const today = todayKey();
+  const tomorrow = tomorrowKey();
+
+  const todayEvents: CalendarEvent[] = [];
+  const tomorrowEvents: CalendarEvent[] = [];
+
   for (const e of events.events) {
-    const key = eventDay(e);
-    const arr = grouped.get(key) ?? [];
-    arr.push(e);
-    grouped.set(key, arr);
+    const k = dateKey(eventStartIso(e));
+    if (k === today) todayEvents.push(e);
+    else if (k === tomorrow) tomorrowEvents.push(e);
   }
+
+  if (todayEvents.length === 0 && tomorrowEvents.length === 0) return null;
 
   return (
     <section className="section section--events">
       <h2 className="section-title">Calendar</h2>
-      {Array.from(grouped.entries()).map(([day, items]) => (
-        <div key={day} className="day-group">
-          <h3 className="day-label">{day}</h3>
+
+      <div className="day-group">
+        <h3 className="day-label">
+          Today · <span className="num">{todayEvents.length}</span>
+        </h3>
+        {todayEvents.length > 0 ? (
           <ul className="event-list">
-            {items.map((e) => (
-              <li key={e.id} className="event">
-                <span className="event-time">{eventStart(e)}</span>
-                <span className="event-title">{e.summary ?? "(no title)"}</span>
-                {e.location && <span className="event-loc">{e.location}</span>}
-              </li>
+            {todayEvents.map((e) => (
+              <EventRow key={e.id} e={e} />
             ))}
           </ul>
+        ) : (
+          <p className="day-empty">nothing on the calendar today.</p>
+        )}
+      </div>
+
+      {tomorrowEvents.length > 0 && (
+        <div className="day-group">
+          <button
+            type="button"
+            className="day-toggle"
+            onClick={() => setTomorrowOpen((o) => !o)}
+            aria-expanded={tomorrowOpen}
+          >
+            <span className="day-label">
+              Tomorrow · <span className="num">{tomorrowEvents.length}</span>
+            </span>
+            <span
+              className={`day-toggle-icon ${tomorrowOpen ? "day-toggle-icon--open" : ""}`}
+              aria-hidden="true"
+            >
+              ▾
+            </span>
+          </button>
+          {tomorrowOpen && (
+            <ul className="event-list">
+              {tomorrowEvents.map((e) => (
+                <EventRow key={e.id} e={e} />
+              ))}
+            </ul>
+          )}
         </div>
-      ))}
+      )}
     </section>
   );
 }
