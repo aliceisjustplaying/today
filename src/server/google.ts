@@ -122,6 +122,7 @@ export async function listCalendarEvents(
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cf: { cacheTtl: 30, cacheEverything: true },
   });
 
   if (res.status === 401) throw new GoogleReauthNeeded("calendar 401");
@@ -150,7 +151,10 @@ type CalendarListResponse = { items?: CalendarListItem[] };
 export async function listCalendars(accessToken: string): Promise<CalendarListItem[]> {
   const res = await fetch(
     "https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader",
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cf: { cacheTtl: 600, cacheEverything: true },
+    },
   );
   if (res.status === 401) throw new GoogleReauthNeeded("calendarList 401");
   if (!res.ok) {

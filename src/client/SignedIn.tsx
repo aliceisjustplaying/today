@@ -10,11 +10,16 @@ import { Now } from "./Now";
 import { Today } from "./Today";
 import { Events } from "./Events";
 import { Upcoming } from "./Upcoming";
+import { clearCached, getCached, setCached } from "./cache";
 
 export function SignedIn({ me }: { me: Me }) {
-  const [now, setNow] = useState<NowState | null>(null);
-  const [tasks, setTasks] = useState<TasksResponse | null>(null);
-  const [events, setEvents] = useState<EventsResponse | null>(null);
+  const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now"));
+  const [tasks, setTasks] = useState<TasksResponse | null>(() =>
+    getCached<TasksResponse>("tasks"),
+  );
+  const [events, setEvents] = useState<EventsResponse | null>(() =>
+    getCached<EventsResponse>("events"),
+  );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +31,9 @@ export function SignedIn({ me }: { me: Me }) {
         return;
       }
       if (!r.ok) throw new Error(`now ${r.status}`);
-      setNow((await r.json()) as NowState);
+      const data = (await r.json()) as NowState;
+      setNow(data);
+      setCached("now", data);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -36,7 +43,11 @@ export function SignedIn({ me }: { me: Me }) {
   const loadTasks = useCallback(async () => {
     try {
       const r = await fetch("/api/tasks");
-      if (r.ok) setTasks((await r.json()) as TasksResponse);
+      if (r.ok) {
+        const data = (await r.json()) as TasksResponse;
+        setTasks(data);
+        setCached("tasks", data);
+      }
     } catch {
       /* non-fatal */
     }
@@ -45,7 +56,11 @@ export function SignedIn({ me }: { me: Me }) {
   const loadEvents = useCallback(async () => {
     try {
       const r = await fetch("/api/events");
-      if (r.ok) setEvents((await r.json()) as EventsResponse);
+      if (r.ok) {
+        const data = (await r.json()) as EventsResponse;
+        setEvents(data);
+        setCached("events", data);
+      }
     } catch {
       /* non-fatal */
     }
@@ -110,6 +125,10 @@ export function SignedIn({ me }: { me: Me }) {
     [loadTasks],
   );
 
+  const onLogout = useCallback(() => {
+    clearCached();
+  }, []);
+
   const handle = me.email.split("@")[0] ?? "you";
 
   return (
@@ -121,7 +140,7 @@ export function SignedIn({ me }: { me: Me }) {
           </div>
           <span className="brand-name">today</span>
         </div>
-        <form method="post" action="/auth/logout">
+        <form method="post" action="/auth/logout" onSubmit={onLogout}>
           <button className="topbar-logout" type="submit" aria-label="Sign out">
             {handle}
           </button>

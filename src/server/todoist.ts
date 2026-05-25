@@ -41,6 +41,7 @@ export async function fetchTasksByFilter(
   const url = `${BASE}/tasks/filter?query=${encodeURIComponent(query)}&limit=${limit}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
+    cf: { cacheTtl: 20, cacheEverything: true },
   });
   if (!res.ok) {
     throw new Error(`Todoist ${res.status}: ${await res.text()}`);
