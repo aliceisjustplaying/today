@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CalendarEvent, EventsResponse } from "./types";
-import { fantasticalForEvent } from "./urls";
-import { OpenIcon } from "./icons";
+import { fantasticalOpen } from "./urls";
+import { CalendarIcon } from "./icons";
 
 function eventStartIso(e: CalendarEvent): string {
   if (e.start && "dateTime" in e.start) return e.start.dateTime;
@@ -41,13 +41,6 @@ function EventRow({ e }: { e: CalendarEvent }) {
       <span className="event-time">{eventStartTime(e)}</span>
       <span className="event-title">{e.summary ?? "(no title)"}</span>
       {e.location && <span className="event-loc">{e.location}</span>}
-      <a
-        className="row-open event-open"
-        href={fantasticalForEvent(e)}
-        aria-label="open in Fantastical"
-      >
-        <OpenIcon />
-      </a>
     </li>
   );
 }
@@ -73,7 +66,16 @@ export function Events({ events }: { events: EventsResponse | null }) {
 
   return (
     <section className="section section--events">
-      <h2 className="section-title">Calendar</h2>
+      <div className="section-head">
+        <h2 className="section-title">Calendar</h2>
+        <a
+          className="section-open"
+          href={fantasticalOpen}
+          aria-label="open Fantastical"
+        >
+          <CalendarIcon />
+        </a>
+      </div>
 
       <div className="day-group">
         <h3 className="day-label">Today</h3>
