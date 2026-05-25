@@ -8,6 +8,7 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 8787,
     strictPort: true,
+    allowedHosts: [".trycloudflare.com", ".example.com", "localhost"],
   },
   resolve: {
     alias: {
