@@ -1,5 +1,7 @@
 import type { TasksResponse, TodoistTask } from "./types";
 import { formatDateShort } from "./format";
+import { todoistTaskUrl } from "./urls";
+import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
@@ -56,6 +58,13 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
                     </div>
                   )}
                 </div>
+                <a
+                  className="row-open"
+                  href={todoistTaskUrl(t.id)}
+                  aria-label="open in Todoist"
+                >
+                  <OpenIcon />
+                </a>
               </li>
             ))}
           </ul>

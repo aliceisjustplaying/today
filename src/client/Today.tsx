@@ -1,4 +1,6 @@
 import type { TasksResponse, TodoistTask } from "./types";
+import { todoistTaskUrl } from "./urls";
+import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
@@ -84,6 +86,13 @@ function TaskItem({
           </div>
         )}
       </div>
+      <a
+        className="row-open"
+        href={todoistTaskUrl(task.id)}
+        aria-label="open in Todoist"
+      >
+        <OpenIcon />
+      </a>
     </li>
   );
 }

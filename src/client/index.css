@@ -641,11 +641,12 @@ a {
 }
 .event {
   display: grid;
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 46px 1fr auto;
   gap: 1px 12px;
   padding: 5px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
+  align-items: start;
 }
 .event:last-child {
   border-bottom: none;
@@ -663,12 +664,46 @@ a {
   color: var(--ink-soft);
   word-wrap: break-word;
   line-height: 1.3;
+  grid-column: 2;
 }
 .event-loc {
   font-size: 11px;
   color: var(--muted);
   grid-column: 2;
   word-wrap: break-word;
+}
+.event-open {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+/* open-in-app button on tasks + events */
+.row-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--muted-soft);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.row-open:hover {
+  color: var(--coral);
+  background: var(--coral-tint);
+}
+.row-open:active {
+  transform: scale(0.92);
+}
+.task .row-open {
+  margin-top: -2px;
 }
 
 /* ─────── signin ─────── */
