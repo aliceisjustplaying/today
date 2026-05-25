@@ -28,5 +28,11 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"routes": [
+		{
+			"pattern": "today.example.com",
+			"custom_domain": true
+		}
+	]
 }
