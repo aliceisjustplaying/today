@@ -1,0 +1,34 @@
+# dependencies
+node_modules
+
+# build output
+out
+dist
+*.tgz
+
+# coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+
+# secrets / env
+.env
+.env.*
+.dev.vars
+.dev.vars.local
+
+# wrangler / cloudflare
+.wrangler
+worker-configuration.d.ts
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IDE / OS
+.idea
+.DS_Store

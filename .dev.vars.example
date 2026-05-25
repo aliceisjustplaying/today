@@ -1,0 +1,23 @@
+# Copy your existing .env to .dev.vars (wrangler / vite read this for local dev).
+# In prod, set the same names via `bunx wrangler secret put <NAME>`.
+#
+# Keys you already have in .env: TODOIST_API_TOKEN, GOOGLE_OAUTH_CLIENT_ID,
+# GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_API_KEY (Routes-restricted).
+#
+# Add these two — not in .env yet:
+
+SESSION_SECRET=         # 32 random bytes hex; `openssl rand -hex 32`
+ANTHROPIC_API_KEY=      # from console.anthropic.com → Settings → API Keys
+
+# Already in .env, included here for reference:
+TODOIST_API_TOKEN=
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+GOOGLE_API_KEY=         # restricted to Routes API
+
+# Post-v0 (leave in .env, we'll wire it later):
+# YNAB_PAT=
+
+# Cloudflare auth is handled by `bunx wrangler login` (OAuth, browser-based).
+# You do NOT need CLOUDFLARE_GLOBAL_API_KEY / CLOUDFLARE_EMAIL for wrangler;
+# they can stay in .env unused, or remove them.

@@ -1,0 +1,32 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "today",
+	"main": "src/server/index.ts",
+	"compatibility_date": "2025-05-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "./dist/client",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "today",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle/migrations"
+		}
+	],
+	"vars": {
+		"GOOGLE_OAUTH_REDIRECT_URI": "https://today.example.com/auth/google/callback",
+		"ALLOWED_EMAIL": "you@example.com",
+		"TIMEZONE": "Europe/London",
+		"TRANSPORT_DEFAULT": "TRANSIT",
+		"TRANSPORT_RESCUE": "DRIVE",
+		"BUFFER_MINUTES": "10"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

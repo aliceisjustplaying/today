@@ -1,0 +1,37 @@
+{
+  "name": "today",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "wrangler types",
+    "predev": "wrangler types",
+    "prebuild": "wrangler types",
+    "dev": "vite",
+    "build": "vite build",
+    "deploy": "vite build && wrangler deploy",
+    "preview": "vite preview",
+    "typecheck": "tsgo --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply today --local",
+    "db:migrate:remote": "wrangler d1 migrations apply today --remote",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.98.0",
+    "@hono/oauth-providers": "0.8.5",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.23",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.38.0",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "drizzle-kit": "0.31.10",
+    "@typescript/native-preview": "7.0.0-dev.20260421.2",
+    "vite": "8.0.14",
+    "wrangler": "4.94.0"
+  }
+}

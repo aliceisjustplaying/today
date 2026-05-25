@@ -1,0 +1,17 @@
+{
+  "name": "today",
+  "short_name": "today",
+  "description": "The Now layer above Todoist + Google Calendar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfaf4",
+  "theme_color": "#d97757",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
