@@ -12,5 +12,5 @@ export function fantasticalForEvent(e: CalendarEvent): string {
     dateKey = e.start.date;
   }
   if (!dateKey) return "x-fantastical3://";
-  return `x-fantastical3://show?date=${encodeURIComponent(dateKey)}`;
+  return `x-fantastical3://show/calendar/${encodeURIComponent(dateKey)}`;
 }
