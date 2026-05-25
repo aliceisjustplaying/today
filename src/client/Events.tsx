@@ -76,9 +76,7 @@ export function Events({ events }: { events: EventsResponse | null }) {
       <h2 className="section-title">Calendar</h2>
 
       <div className="day-group">
-        <h3 className="day-label">
-          Today · <span className="num">{todayEvents.length}</span>
-        </h3>
+        <h3 className="day-label">Today</h3>
         {todayEvents.length > 0 ? (
           <ul className="event-list">
             {todayEvents.map((e) => (
@@ -98,9 +96,7 @@ export function Events({ events }: { events: EventsResponse | null }) {
             onClick={() => setTomorrowOpen((o) => !o)}
             aria-expanded={tomorrowOpen}
           >
-            <span className="day-label">
-              Tomorrow · <span className="num">{tomorrowEvents.length}</span>
-            </span>
+            <span className="day-label">Tomorrow</span>
             <span
               className={`day-toggle-icon ${tomorrowOpen ? "day-toggle-icon--open" : ""}`}
               aria-hidden="true"
