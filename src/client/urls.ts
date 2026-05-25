@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "./types";
 
 export function todoistTaskUrl(taskId: string): string {
-  return `https://todoist.com/showTask?id=${encodeURIComponent(taskId)}`;
+  return `https://app.todoist.com/app/task/${encodeURIComponent(taskId)}`;
 }
 
 export function fantasticalForEvent(e: CalendarEvent): string {
