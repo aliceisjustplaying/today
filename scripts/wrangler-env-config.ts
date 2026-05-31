@@ -52,6 +52,7 @@ const customDomain = env.CLOUDFLARE_CUSTOM_DOMAIN?.trim();
 const config = {
   $schema: "node_modules/wrangler/config-schema.json",
   name: env.CLOUDFLARE_WORKER_NAME?.trim() || "today",
+  ...(env.CLOUDFLARE_ACCOUNT_ID?.trim() ? { account_id: env.CLOUDFLARE_ACCOUNT_ID.trim() } : {}),
   main: "src/server/index.ts",
   compatibility_date: "2025-05-01",
   compatibility_flags: ["nodejs_compat"],
