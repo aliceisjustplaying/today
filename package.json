@@ -4,18 +4,17 @@
   "type": "module",
   "scripts": {
     "postinstall": "wrangler types",
-    "predev": "wrangler types",
-    "prebuild": "wrangler types",
-    "dev": "vite",
-    "build": "vite build",
-    "deploy": "vite build && wrangler deploy",
+    "wrangler:config": "bun run scripts/wrangler-env-config.ts",
+    "dev": "bun run wrangler:config && WRANGLER_CONFIG_PATH=wrangler.local.jsonc vite",
+    "build": "bun run wrangler:config && WRANGLER_CONFIG_PATH=wrangler.local.jsonc vite build",
+    "deploy": "bun run build && wrangler deploy",
     "preview": "vite preview",
     "tunnel": "bun run scripts/tunnel.ts",
     "typecheck": "tsgo --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply today --local",
-    "db:migrate:remote": "wrangler d1 migrations apply today --remote",
-    "cf-typegen": "wrangler types"
+    "db:migrate:local": "bun run wrangler:config && wrangler d1 migrations apply today --local --config wrangler.local.jsonc",
+    "db:migrate:remote": "bun run wrangler:config && wrangler d1 migrations apply today --remote --config wrangler.local.jsonc",
+    "cf-typegen": "bun run wrangler:config && wrangler types --config wrangler.local.jsonc"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.98.0",

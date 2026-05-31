@@ -22,8 +22,8 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 ## Conventions
 
 - All API routes live under `/api/*` and are defined in `src/server/`. Catch-all forwards to `ASSETS` so the SPA handles client routes (`app.notFound((c) => c.env.ASSETS.fetch(c.req.raw))`).
-- Secrets locally: `.dev.vars`. Secrets in prod: `bunx wrangler secret put NAME`. `.dev.vars` and `.dev.vars.local` are gitignored.
-- Non-secret config (redirect URI, allowed email): `vars` block in `wrangler.jsonc`.
+- Secrets and private config locally: `.dev.vars` / `.env`. Secrets in prod: `bunx wrangler secret put NAME`.
+- `wrangler.jsonc` is public-safe. Real deployment config is generated into gitignored `wrangler.local.jsonc` with `bun run wrangler:config`.
 - All AI calls go through the Anthropic SDK (`@anthropic-ai/sdk`) with prompt caching on the system prompt — see [memory project_today_stack and feature implementations].
 - Candidates are inserted with `status = "candidate"`. They become real tasks only when explicitly approved → Todoist write.
 - Audit: every state-changing action should be loggable. v0 just `console.log`s; structured audit table comes later.

@@ -1,23 +1,25 @@
-# Copy your existing .env to .dev.vars (wrangler / vite read this for local dev).
-# In prod, set the same names via `bunx wrangler secret put <NAME>`.
-#
-# Keys you already have in .env: TODOIST_API_TOKEN, GOOGLE_OAUTH_CLIENT_ID,
-# GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_API_KEY (Routes-restricted).
-#
-# Add these two — not in .env yet:
+# Copy this to .dev.vars for local Worker dev.
+# Private deployment config is read from .env / .dev.vars and written to
+# gitignored wrangler.local.jsonc by `bun run wrangler:config`.
 
-SESSION_SECRET=         # 32 random bytes hex; `openssl rand -hex 32`
-ANTHROPIC_API_KEY=      # from console.anthropic.com → Settings → API Keys
+CLOUDFLARE_WORKER_NAME=today
+CLOUDFLARE_D1_DATABASE_NAME=today
+CLOUDFLARE_D1_DATABASE_ID=
+CLOUDFLARE_CUSTOM_DOMAIN=
+VITE_ALLOWED_HOSTS=
 
-# Already in .env, included here for reference:
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8787/auth/google/callback
+ALLOWED_EMAIL=you@example.com
+TIMEZONE=UTC
+TRANSPORT_DEFAULT=TRANSIT
+TRANSPORT_RESCUE=DRIVE
+BUFFER_MINUTES=10
+
 TODOIST_API_TOKEN=
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
-GOOGLE_API_KEY=         # restricted to Routes API
+GOOGLE_API_KEY=
+SESSION_SECRET=
+ANTHROPIC_API_KEY=
 
-# Post-v0 (leave in .env, we'll wire it later):
 # YNAB_PAT=
-
-# Cloudflare auth is handled by `bunx wrangler login` (OAuth, browser-based).
-# You do NOT need CLOUDFLARE_GLOBAL_API_KEY / CLOUDFLARE_EMAIL for wrangler;
-# they can stay in .env unused, or remove them.

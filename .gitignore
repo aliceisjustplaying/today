@@ -19,6 +19,7 @@ logs
 .env.*
 .dev.vars
 .dev.vars.local
+wrangler.local.jsonc
 
 # wrangler / cloudflare
 .wrangler

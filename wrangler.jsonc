@@ -19,20 +19,14 @@
 		}
 	],
 	"vars": {
-		"GOOGLE_OAUTH_REDIRECT_URI": "https://today.example.com/auth/google/callback",
+		"GOOGLE_OAUTH_REDIRECT_URI": "http://localhost:8787/auth/google/callback",
 		"ALLOWED_EMAIL": "you@example.com",
-		"TIMEZONE": "Europe/London",
+		"TIMEZONE": "UTC",
 		"TRANSPORT_DEFAULT": "TRANSIT",
 		"TRANSPORT_RESCUE": "DRIVE",
 		"BUFFER_MINUTES": "10"
 	},
 	"observability": {
 		"enabled": true
-	},
-	"routes": [
-		{
-			"pattern": "today.example.com",
-			"custom_domain": true
-		}
-	]
+	}
 }

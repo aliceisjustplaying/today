@@ -8,7 +8,7 @@ The `today` project is not a todo app. It is a personal **Now layer** sitting ab
 
 ## Bar for v0
 
-Opening `today.example.com` in the morning gives a better answer in ten seconds than opening Todoist + Calendar + email + brain.
+Opening the deployed app in the morning gives a better answer in ten seconds than opening Todoist + Calendar + email + brain.
 
 It is **not** comprehensive. It reduces one specific friction: the executive-function math of "what does this calendar + task + body situation mean in time?"
 
@@ -166,7 +166,7 @@ type TransportPreference = {
 
 ## v0 build milestones
 
-- Hosted Worker at today.example.com with Google sign-in (allowlisted to you@example.com)
+- Hosted Worker with Google sign-in allowlisted to one configured email
 - Todoist OAuth + read Today / Overdue / Next-7
 - Google Calendar OAuth + read today + tomorrow events
 - Routes API integration for travel time on the next anchor
