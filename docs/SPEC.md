@@ -1,114 +1,186 @@
 # Personal Control Panel — Spec
 
-The `today` project is not a todo app. It is a personal **Now layer** sitting above Todoist, Google Calendar, and YNAB, doing the synthesis those tools won't do together.
-
-## Core product sentence
+`today` is a personal **Now layer** above Todoist and Google Calendar. It answers the short-horizon question those tools do not answer together:
 
 > Given the next real anchor event, current body/admin state, and travel/prep time, what is the next sane action?
 
-## Bar for v0
+It is not a general todo app, calendar app, or life dashboard. The default view is the present: what is next, what must happen today, and what pressure is close enough to matter.
 
-Opening the deployed app in the morning gives a better answer in ten seconds than opening Todoist + Calendar + email + brain.
+## Current v0
 
-It is **not** comprehensive. It reduces one specific friction: the executive-function math of "what does this calendar + task + body situation mean in time?"
+Opening the deployed app in the morning should be more useful in ten seconds than opening Todoist + Calendar and doing the time math by hand.
 
-## What the app does that the others don't
+The current app includes:
 
-Existing tools each hold a slice; the head is the volatile RAM joining them.
+- Google sign-in with a single allowlisted email.
+- Google Calendar read access for today and tomorrow.
+- Todoist task read access through a personal API token.
+- Todoist task completion from the app.
+- A Now panel centered on the next calendar anchor.
+- Body/prep state stored in D1 and used to calculate prep time.
+- Google Routes travel estimates from a configured home address to the next anchor location.
+- Today, Calendar, and Upcoming sections.
+- Local client cache for fast first paint, refreshed on focus and on a one-minute Now interval.
+- PWA manifest and static asset serving from the same Worker.
 
-| Thing                                | Where it belongs                                |
-| ------------------------------------ | ----------------------------------------------- |
-| Durable tasks                        | Todoist                                         |
-| Hard time commitments                | Google Calendar                                 |
-| Money context                        | YNAB (read-only, contextual)                    |
-| "What am I doing now / what's next?" | This app                                        |
-| Body/leaving state                   | This app (local state, not Todoist)             |
-| Message reply obligations            | This app (Candidate queue)                      |
-| AI-extracted possible tasks          | Candidates — not real tasks until approved      |
+Not shipped yet:
 
-## v0 sections
+- Candidate capture.
+- Brain-dump extraction.
+- Candidate approval into Todoist.
+- YNAB integration.
+- Email or messaging ingestion.
+- Notifications.
+
+## Data Sources
+
+| Thing                                | Source / owner                                      |
+| ------------------------------------ | --------------------------------------------------- |
+| Durable tasks                        | Todoist                                             |
+| Task completion                      | Todoist API                                         |
+| Hard time commitments                | Google Calendar                                     |
+| Travel time                          | Google Routes API                                   |
+| "What am I doing now / what's next?" | This app                                            |
+| Body/prep state                      | This app, in D1                                     |
+| Money context                        | Future YNAB integration                             |
+| Candidate tasks/replies              | Future candidate pipeline; schema exists but unused |
+
+## Product Surface
 
 ### Now
 
-The killer feature. Centred on the next anchor.
+The primary view. It shows:
 
-Example output:
+- Current time and date.
+- Next calendar anchor.
+- Time remaining until the anchor.
+- Anchor location, with virtual locations treated as no-travel events.
+- Default travel mode and leave-by time when a route can be computed.
+- Rescue travel mode and leave-by time when a route can be computed.
+- Prep start time based on remaining prep steps and buffer minutes.
+- Prep/body toggles: eaten, showered, shaved, dressed, packed, running late.
 
-```
-NOW
-Monday 1:47pm
+Prep durations are fixed in code for v0:
 
-Next event:
-Co-living / coding / social thing at 6:30pm
-Location: X
-
-Time remaining: 4h 43m
-
-Default travel:
-Public transport: 40m
-Leave by: 5:40pm
-Start getting ready by: 4:50pm
-
-Uber rescue:
-Uber: 20m
-Leave by: 6:00pm
-Use only if running late / low capacity
+```ts
+{
+  eaten: 15,
+  showered: 15,
+  shaved: 10,
+  dressed: 5,
+  packed: 10,
+}
 ```
 
-Body-state buttons that recalculate Now:
+`runningLate` is persisted as body state but does not currently change routing or timing logic.
 
-- I haven't eaten
-- I need to shower
-- I need to shave
-- I am not dressed
-- I need to pack
-- I am running late
-- I am skipping this event
-- I left
+### Calendar
 
-Tapping a state moves the relevant prep step to the top and shrinks the available work block.
+The Calendar section lists today's events and optionally expands tomorrow's events. A calendar button opens the user's calendar app through the configured client URL.
 
 ### Today
 
-- Todoist tasks due today
-- Overdue
-- Manually pinned "must not rot" tasks
+The Today section lists Todoist tasks that are overdue or due today. Tasks can be completed from the app and opened in Todoist.
 
-### Upcoming pressure
+### Upcoming
 
-- Tomorrow
-- Next 7 days
-- Return windows / appointments / deadlines
-- Grouped (admin / health / housing / money / work)
+The Upcoming section lists Todoist tasks due in the next seven days, grouped by due date. Tasks can be completed from the app and opened in Todoist.
 
-### Capture
+## Runtime Behavior
 
-- Text box: brain dump → extract Candidates
-- Approve → write to Todoist
-- No fancy editing in v0
+The Worker serves both API routes and the React SPA.
 
-## Domain model (v0)
+API routes:
+
+```txt
+GET  /api/ping
+GET  /api/me
+GET  /api/tasks
+GET  /api/events
+GET  /api/now
+POST /api/tasks/:id/close
+POST /api/body-state
+```
+
+Auth routes:
+
+```txt
+GET  /auth/google/start
+GET  /auth/google/callback
+POST /auth/logout
+```
+
+All `/api/*` routes except `/api/ping` require a session. Unknown `/api/*` routes return JSON 404. Non-API routes fall through to static assets so the SPA can handle client routes.
+
+## Configuration
+
+Tracked `wrangler.jsonc` contains public-safe defaults. Private deployment config is read from `.env` / `.dev.vars` and generated into ignored `wrangler.local.jsonc`.
+
+Required private values:
+
+```txt
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_D1_DATABASE_ID
+GOOGLE_OAUTH_REDIRECT_URI
+ALLOWED_EMAIL
+GOOGLE_OAUTH_CLIENT_ID
+GOOGLE_OAUTH_CLIENT_SECRET
+GOOGLE_API_KEY
+TODOIST_API_TOKEN
+SESSION_SECRET
+ANTHROPIC_API_KEY
+```
+
+Optional private values:
+
+```txt
+CLOUDFLARE_WORKER_NAME
+CLOUDFLARE_D1_DATABASE_NAME
+CLOUDFLARE_CUSTOM_DOMAIN
+VITE_ALLOWED_HOSTS
+HOME_ADDRESS
+TIMEZONE
+TRANSPORT_DEFAULT
+TRANSPORT_RESCUE
+BUFFER_MINUTES
+```
+
+`HOME_ADDRESS` is required for travel estimates. Without it, events still render, but travel rows do not.
+
+## Domain Model
 
 ```ts
-type Anchor = {
-  source: "google_calendar"
-  externalId: string
-  startsAt: string
-  endsAt: string
-  title: string
-  location?: string
-  travelHints?: { mode: string; minutes: number }[]
-}
-
-type PrepStep = {
-  id: string
-  label: string
-  estimateMinutes: number
-  required: boolean
-  satisfied: boolean
+type NowState = {
+  currentTime: string
+  anchor: {
+    id: string
+    title: string
+    location: string | null
+    isVirtual: boolean
+    start: string
+    end: string | null
+  } | null
+  travel: {
+    defaultMode: "TRANSIT" | "DRIVE" | "WALK" | "BICYCLE"
+    defaultMinutes: number | null
+    rescueMode: "TRANSIT" | "DRIVE" | "WALK" | "BICYCLE"
+    rescueMinutes: number | null
+  } | null
+  timing: {
+    timeRemainingMinutes: number
+    leaveByDefault: string | null
+    leaveByRescue: string | null
+    prepStart: string | null
+    prepRequiredMinutes: number
+    bufferMinutes: number
+  } | null
+  bodyState: BodyState
+  prepSteps: PrepStep[]
+  travelError: string | null
 }
 
 type BodyState = {
+  id: number
   eaten: boolean
   showered: boolean
   shaved: boolean
@@ -118,62 +190,38 @@ type BodyState = {
   updatedAt: string
 }
 
-type Candidate = {
-  id: string
-  kind: "todo" | "reply" | "calendar" | "waiting" | "note"
-  source: {
-    app: "email" | "telegram" | "discord" | "manual" | "brain_dump"
-    account?: string
-    url?: string
-    sender?: string
-    timestamp?: string
-  }
-  summary: string
-  proposedAction: string
-  urgency: "now" | "today" | "this_week" | "later" | "unknown"
-  confidence: "high" | "medium" | "low"
-  status: "candidate" | "approved" | "ignored" | "snoozed" | "done"
-}
-
-type TransportPreference = {
-  defaultMode: "transit" | "walk" | "cycle" | "drive"
-  rescueMode?: "uber" | "drive" | "taxi"
-  rescueRule?: string  // human-readable, surfaced as neutral context, never moralizing
+type PrepStep = {
+  key: "eaten" | "showered" | "shaved" | "dressed" | "packed"
+  minutes: number
+  done: boolean
 }
 ```
 
-## Hard rules
+D1 tables:
 
-- AI can suggest. The app records.
-- AI outputs Candidates, not real tasks, unless approved.
-- Every Candidate has a source.
-- Every action has an audit log.
-- The default view hides the backlog.
-- The app shows Now / Today first, not "all of life."
-- No moralising about money. Encode preferences neutrally.
-- No manual/fixture data. Only real integrations.
+- `sessions`
+- `oauth_tokens`
+- `body_state`
+- `candidates` (reserved for future capture work)
+- `prefs` (reserved for future preference UI)
 
-## Out of scope for v0
+## Hard Rules
 
-- WhatsApp / Signal ingestion
-- Discord general scraping (bot-only and only specific channels later)
-- Push notifications (only event-imminent + must-not-rot, added after v0)
-- YNAB integration (v0.5 — encode money preferences as static config first)
-- Email scanning (post-v0)
-- Object trial / return tracker (post-v0)
-- Daily shutdown / savepoint (post-v0)
-- Housing CRM (separate project; do not bolt onto v0)
+- Show Now / Today first, not the whole backlog.
+- Do not create manual fixture data for production behavior.
+- Todoist remains the durable task source.
+- Prep/body state stays app-local and does not become Todoist tasks.
+- Google Calendar remains the source of hard time commitments.
+- Do not moralize about money or travel tradeoffs in UI copy.
+- AI can suggest, but the app records explicit user-approved actions.
 
-## v0 build milestones
+## Future Work
 
-- Hosted Worker with Google sign-in allowlisted to one configured email
-- Todoist OAuth + read Today / Overdue / Next-7
-- Google Calendar OAuth + read today + tomorrow events
-- Routes API integration for travel time on the next anchor
-- Now panel: anchor + leave-by + prep-start + body-state buttons
-- Today / Upcoming panels
-- Brain-dump → Candidate extraction
-- Approve Candidate → Todoist write
-- PWA manifest + installable on iOS
-
-After v0 ships, the order is: email scan, Telegram capture, YNAB context, object/return tracker, daily savepoint.
+- Candidate capture: brain dump → structured candidates.
+- Candidate approval: approved todo candidates write to Todoist.
+- Email and message scans for possible reply obligations.
+- YNAB read-only context.
+- Push notifications for event-imminent and must-not-rot cases.
+- Object trial / return tracker.
+- Daily shutdown / savepoint.
+- Housing CRM as a separate project, not part of this app.
