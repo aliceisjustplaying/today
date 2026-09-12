@@ -4,9 +4,11 @@ import type {
   EventsResponse,
   Me,
   NowState,
+  ReturnsResponse,
   TasksResponse,
 } from "./types";
 import { Now } from "./Now";
+import { Returns } from "./Returns";
 import { Today } from "./Today";
 import { Events } from "./Events";
 import { Upcoming } from "./Upcoming";
@@ -19,6 +21,9 @@ export function SignedIn({ me }: { me: Me }) {
   );
   const [events, setEvents] = useState<EventsResponse | null>(() =>
     getCached<EventsResponse>("events"),
+  );
+  const [returns, setReturns] = useState<ReturnsResponse | null>(() =>
+    getCached<ReturnsResponse>("returns.todoist"),
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -66,22 +71,37 @@ export function SignedIn({ me }: { me: Me }) {
     }
   }, []);
 
+  const loadReturns = useCallback(async () => {
+    try {
+      const r = await fetch("/api/returns");
+      if (r.ok) {
+        const data = (await r.json()) as ReturnsResponse;
+        setReturns(data);
+        setCached("returns.todoist", data);
+      }
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
   useEffect(() => {
     loadNow();
     loadTasks();
     loadEvents();
+    loadReturns();
     const interval = window.setInterval(loadNow, 60_000);
     const onFocus = () => {
       loadNow();
       loadTasks();
       loadEvents();
+      loadReturns();
     };
     window.addEventListener("focus", onFocus);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [loadNow, loadTasks, loadEvents]);
+  }, [loadNow, loadTasks, loadEvents, loadReturns]);
 
   const onBodyStateChange = useCallback(
     async (updates: BodyStateUpdate) => {
@@ -151,6 +171,7 @@ export function SignedIn({ me }: { me: Me }) {
       <Events events={events} />
       <Today tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Upcoming tasks={tasks} completing={completing} onComplete={onCompleteTask} />
+      <Returns returns={returns} />
 
       {error && <div className="error-toast">{error}</div>}
     </main>

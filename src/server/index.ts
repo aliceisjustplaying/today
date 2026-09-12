@@ -10,6 +10,7 @@ import {
   GoogleReauthNeeded,
 } from "./google";
 import { computeNowState, updateBodyState } from "./now";
+import { getReturns } from "./returns";
 import type { Env } from "./env";
 
 const DEFAULT_TZ = "Europe/London";
@@ -58,6 +59,15 @@ app.get("/api/events", requireSession, async (c) => {
     }
     throw e;
   }
+});
+
+app.get("/api/returns", requireSession, async (c) => {
+  return c.json(
+    await getReturns({
+      token: c.env.TODOIST_API_TOKEN,
+      timezone: c.env.TIMEZONE || DEFAULT_TZ,
+    }),
+  );
 });
 
 app.get("/api/now", requireSession, async (c) => {

@@ -5,11 +5,16 @@ export type TodoistDue = {
   is_recurring: boolean;
 };
 
+export type TodoistDeadline = {
+  date: string;
+};
+
 export type TodoistTask = {
   id: string;
   content: string;
   description: string;
   due: TodoistDue | null;
+  deadline?: TodoistDeadline | null;
   priority: number;
   project_id: string;
   labels: string[];

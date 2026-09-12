@@ -15,14 +15,17 @@ export async function computeTravelMinutes(opts: {
   mode: TravelMode;
   departureTime?: Date;
 }): Promise<number | null> {
+  const futureDepartureTime = opts.departureTime
+    ? new Date(Math.max(opts.departureTime.getTime(), Date.now() + 60_000))
+    : null;
   const body: Record<string, unknown> = {
     origins: [{ waypoint: { address: opts.origin } }],
     destinations: [{ waypoint: { address: opts.destination } }],
     travelMode: opts.mode,
   };
 
-  if (opts.departureTime) {
-    body.departureTime = opts.departureTime.toISOString();
+  if (futureDepartureTime) {
+    body.departureTime = futureDepartureTime.toISOString();
   }
   if (opts.mode === "DRIVE") {
     body.routingPreference = "TRAFFIC_AWARE";

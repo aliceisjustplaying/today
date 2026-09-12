@@ -52,12 +52,26 @@ export type TodoistTask = {
   priority: number;
   labels: string[];
   due: { date: string; string: string; is_recurring: boolean } | null;
+  deadline?: { date: string } | null;
 };
 
 export type TasksResponse = {
   overdue: TodoistTask[];
   today: TodoistTask[];
   upcoming: TodoistTask[];
+  todayKey: string;
+};
+
+export type ReturnUrgency = "overdue" | "due_today" | "due_soon" | "scheduled" | "no_date";
+
+export type ReturnItem = TodoistTask & {
+  urgency: ReturnUrgency;
+  daysUntilDue: number | null;
+  daysUntilDeadline: number | null;
+};
+
+export type ReturnsResponse = {
+  items: ReturnItem[];
   todayKey: string;
 };
 
