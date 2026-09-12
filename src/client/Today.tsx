@@ -1,11 +1,11 @@
-import type { TasksResponse, TodoistTask } from "./types";
-import { todoistTaskUrl } from "./urls";
+import type { Task, TasksResponse } from "./types";
+import { googleTasksUrl } from "./urls";
 import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (id: string) => void;
+  onComplete: (taskListId: string, id: string) => void;
 };
 
 export function Today({ tasks, completing, onComplete }: Props) {
@@ -24,9 +24,9 @@ export function Today({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {overdue.map((t) => (
               <TaskItem
-                key={t.id}
+                key={`${t.taskListId}:${t.id}`}
                 task={t}
-                completing={completing.has(t.id)}
+                completing={completing.has(`${t.taskListId}:${t.id}`)}
                 onComplete={onComplete}
               />
             ))}
@@ -41,9 +41,9 @@ export function Today({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {today.map((t) => (
               <TaskItem
-                key={t.id}
+                key={`${t.taskListId}:${t.id}`}
                 task={t}
-                completing={completing.has(t.id)}
+                completing={completing.has(`${t.taskListId}:${t.id}`)}
                 onComplete={onComplete}
               />
             ))}
@@ -59,37 +59,30 @@ function TaskItem({
   completing,
   onComplete,
 }: {
-  task: TodoistTask;
+  task: Task;
   completing: boolean;
-  onComplete: (id: string) => void;
+  onComplete: (taskListId: string, id: string) => void;
 }) {
   return (
     <li className={`task ${completing ? "task--completing" : ""}`}>
       <button
         type="button"
         className="task-check"
-        data-priority={task.priority}
         data-completing={completing ? "true" : undefined}
-        onClick={() => onComplete(task.id)}
+        onClick={() => onComplete(task.taskListId, task.id)}
         aria-label={`mark "${task.content}" as done`}
         disabled={completing}
       />
       <div className="task-body">
         <div className="task-content">{task.content}</div>
-        {task.labels.length > 0 && (
-          <div className="task-labels">
-            {task.labels.map((l) => (
-              <span key={l} className="label-chip">
-                {l}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="task-labels">
+          <span className="label-chip">{task.taskListTitle}</span>
+        </div>
       </div>
       <a
         className="row-open"
-        href={todoistTaskUrl(task.id)}
-        aria-label="open in Todoist"
+        href={task.webViewLink ?? googleTasksUrl}
+        aria-label="open in Google Tasks"
       >
         <OpenIcon />
       </a>

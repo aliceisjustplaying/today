@@ -1,7 +1,7 @@
 import type { ReturnItem, ReturnsResponse } from "./types";
 import { formatDateShort } from "./format";
 import { OpenIcon } from "./icons";
-import { todoistTaskUrl } from "./urls";
+import { googleTasksUrl } from "./urls";
 
 function dueLabel(item: ReturnItem): string {
   const fallback = item.due?.date.slice(0, 10);
@@ -12,24 +12,6 @@ function dueLabel(item: ReturnItem): string {
   if (days === 0) return "due today";
   if (days === 1) return "due tomorrow";
   return `due in ${days}d`;
-}
-
-function deadlineLabel(item: ReturnItem): string | null {
-  const fallback = item.deadline?.date.slice(0, 10);
-  const days = item.daysUntilDeadline;
-  if (!fallback) return null;
-  if (days == null) return `deadline ${formatDateShort(fallback)}`;
-  if (days < 0) return `deadline ${Math.abs(days)}d overdue`;
-  if (days === 0) return "deadline today";
-  if (days === 1) return "deadline tomorrow";
-  return `deadline in ${days}d`;
-}
-
-function priorityLabel(priority: number): string {
-  if (priority === 4) return "P1";
-  if (priority === 3) return "P2";
-  if (priority === 2) return "P3";
-  return "P4";
 }
 
 export function Returns({ returns }: { returns: ReturnsResponse | null }) {
@@ -48,31 +30,21 @@ export function Returns({ returns }: { returns: ReturnsResponse | null }) {
 }
 
 function ReturnRow({ item }: { item: ReturnItem }) {
-  const deadline = deadlineLabel(item);
-
   return (
     <li className="return-item" data-urgency={item.urgency}>
       <div className="return-body">
         <div className="return-head">
-          <span className="return-merchant">Todoist</span>
+          <span className="return-merchant">Google Tasks</span>
           <span className="return-due">{dueLabel(item)}</span>
         </div>
         <div className="return-title">{item.content}</div>
-        <div className="return-meta">
-          <span>{priorityLabel(item.priority)}</span>
-          {item.labels
-            .filter((label) => label !== "returns")
-            .map((label) => (
-              <span key={label}>@{label}</span>
-            ))}
-          {deadline && <span>{deadline}</span>}
-        </div>
+        <div className="return-meta">{item.taskListTitle}</div>
         {item.description && <div className="return-action">{item.description}</div>}
       </div>
       <a
         className="row-open"
-        href={todoistTaskUrl(item.id)}
-        aria-label="open return task in Todoist"
+        href={item.webViewLink ?? googleTasksUrl}
+        aria-label="open return task in Google Tasks"
       >
         <OpenIcon />
       </a>

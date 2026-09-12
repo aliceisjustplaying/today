@@ -17,13 +17,13 @@ import { clearCached, getCached, setCached } from "./cache";
 export function SignedIn({ me }: { me: Me }) {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now"));
   const [tasks, setTasks] = useState<TasksResponse | null>(() =>
-    getCached<TasksResponse>("tasks"),
+    getCached<TasksResponse>("tasks.google-tasks"),
   );
   const [events, setEvents] = useState<EventsResponse | null>(() =>
     getCached<EventsResponse>("events"),
   );
   const [returns, setReturns] = useState<ReturnsResponse | null>(() =>
-    getCached<ReturnsResponse>("returns.todoist"),
+    getCached<ReturnsResponse>("returns.google-tasks"),
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +48,16 @@ export function SignedIn({ me }: { me: Me }) {
   const loadTasks = useCallback(async () => {
     try {
       const r = await fetch("/api/tasks");
-      if (r.ok) {
-        const data = (await r.json()) as TasksResponse;
-        setTasks(data);
-        setCached("tasks", data);
+      if (r.status === 401) {
+        window.location.href = "/auth/google/start";
+        return;
       }
-    } catch {
-      /* non-fatal */
+      if (!r.ok) throw new Error(`tasks ${r.status}`);
+      const data = (await r.json()) as TasksResponse;
+      setTasks(data);
+      setCached("tasks.google-tasks", data);
+    } catch (e) {
+      setError(String(e));
     }
   }, []);
 
@@ -74,13 +77,16 @@ export function SignedIn({ me }: { me: Me }) {
   const loadReturns = useCallback(async () => {
     try {
       const r = await fetch("/api/returns");
-      if (r.ok) {
-        const data = (await r.json()) as ReturnsResponse;
-        setReturns(data);
-        setCached("returns.todoist", data);
+      if (r.status === 401) {
+        window.location.href = "/auth/google/start";
+        return;
       }
-    } catch {
-      /* non-fatal */
+      if (!r.ok) throw new Error(`returns ${r.status}`);
+      const data = (await r.json()) as ReturnsResponse;
+      setReturns(data);
+      setCached("returns.google-tasks", data);
+    } catch (e) {
+      setError(String(e));
     }
   }, []);
 
@@ -120,16 +126,22 @@ export function SignedIn({ me }: { me: Me }) {
   );
 
   const onCompleteTask = useCallback(
-    async (id: string) => {
+    async (taskListId: string, id: string) => {
+      const completingKey = `${taskListId}:${id}`;
       setCompleting((prev) => {
         const next = new Set(prev);
-        next.add(id);
+        next.add(completingKey);
         return next;
       });
       try {
-        const r = await fetch(`/api/tasks/${encodeURIComponent(id)}/close`, {
-          method: "POST",
-        });
+        const r = await fetch(
+          `/api/tasks/${encodeURIComponent(taskListId)}/${encodeURIComponent(id)}/close`,
+          { method: "POST" },
+        );
+        if (r.status === 401) {
+          window.location.href = "/auth/google/start";
+          return;
+        }
         if (!r.ok) throw new Error(`close ${r.status}`);
         await loadTasks();
       } catch (e) {
@@ -137,7 +149,7 @@ export function SignedIn({ me }: { me: Me }) {
       } finally {
         setCompleting((prev) => {
           const next = new Set(prev);
-          next.delete(id);
+          next.delete(completingKey);
           return next;
         });
       }

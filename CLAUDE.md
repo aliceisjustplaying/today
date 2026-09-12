@@ -7,7 +7,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - Runtime: **Cloudflare Workers** (not Bun, not Node). Worker entry: `src/server/index.ts`. Hono is the router.
 - DB: **Cloudflare D1** via the `DB` binding. Access through Drizzle (`src/server/db/index.ts`); schema in `src/server/db/schema.ts`.
 - Frontend: **React 19 + Vite**, bundled by `@cloudflare/vite-plugin` and served via the `ASSETS` Workers Static Assets binding from the same Worker.
-- Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Todoist uses a **personal API token** in env, *not* OAuth.
+- Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Google Tasks and Google Calendar use the same stored OAuth grant.
 - Travel time: **Google Routes API** (`computeRouteMatrix`). The legacy Distance Matrix API is deprecated — do not use it.
 - Local package manager: Bun. Run scripts with `bun run …`, install with `bun install`, never npm/yarn/pnpm. CLIs via `bunx`. The runtime *target* of the code is still Workers, not Bun.
 
@@ -15,9 +15,8 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 
 - **Do not use** `Bun.serve`, `bun:sqlite`, `Bun.sql`, `Bun.redis`, `Bun.file`, or any other Bun-runtime API in code under `src/server/`. That code runs in workerd, not Bun.
 - **Do not** introduce manual / fixture / hardcoded data paths as a v0 shortcut. Every data source is a real integration. (See `MEMORY.md → feedback-no-manual-data`.)
-- **Do not** add a Todoist OAuth flow — single-user, personal token only.
 - **Do not** moralize about money in UI copy or AI outputs (e.g. Uber spend). Encode preferences neutrally in `prefs`.
-- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Todoist. Those are app-local state on the `body_state` and `prep_steps` tables.
+- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Google Tasks. Those are app-local state on the `body_state` and `prep_steps` tables.
 
 ## Conventions
 
@@ -25,7 +24,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - Secrets and private config locally: `.dev.vars` / `.env`. Secrets in prod: `bunx wrangler secret put NAME`.
 - `wrangler.jsonc` is public-safe. Real deployment config is generated into gitignored `wrangler.local.jsonc` with `bun run wrangler:config`.
 - All AI calls go through the Anthropic SDK (`@anthropic-ai/sdk`) with prompt caching on the system prompt — see [memory project_today_stack and feature implementations].
-- Candidates are inserted with `status = "candidate"`. They become real tasks only when explicitly approved → Todoist write.
+- Candidates are inserted with `status = "candidate"`. They become real tasks only when explicitly approved → Google Tasks write.
 - Audit: every state-changing action should be loggable. v0 just `console.log`s; structured audit table comes later.
 
 ## Useful scripts

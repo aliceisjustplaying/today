@@ -19,19 +19,21 @@ Steps inside each section are intentionally unnumbered (they may change order).
 - For a custom domain, set `CLOUDFLARE_CUSTOM_DOMAIN` in `.dev.vars` / `.env`.
 - Confirm you can edit DNS for the domain in Cloudflare.
 
-## Google Cloud (Calendar + Routes)
+## Google Cloud (Calendar + Tasks + Routes)
 
 This is the longest section. All in https://console.cloud.google.com.
 
 - Create (or reuse) a Google Cloud project.
 - **Enable APIs** in the project (APIs & Services → Library):
   - **Google Calendar API**
+  - **Google Tasks API**
   - **Routes API** (this is the modern replacement for the legacy Distance Matrix API — same use case, current SKU)
 - **OAuth consent screen** (APIs & Services → OAuth consent screen):
   - User type: **External**
   - App name: `Today`
   - User support email + developer contact email: your email
   - Add scope: `https://www.googleapis.com/auth/calendar.readonly`
+  - Add scope: `https://www.googleapis.com/auth/tasks`
   - Add the same account you will put in `ALLOWED_EMAIL` as a test user.
   - You can leave it in "Testing" status — no need to publish, since you're the only user. Refresh tokens issued in Testing mode expire after 7 days, which is fine; we'll handle re-auth gracefully.
 - **OAuth 2.0 Client ID** (APIs & Services → Credentials → Create credentials → OAuth client ID):
@@ -47,14 +49,11 @@ This is the longest section. All in https://console.cloud.google.com.
   - Save and copy the **API key**.
 - **Billing**: Google Cloud requires a billing account on the project for Routes API even though there's a $200/month free credit. Attach a card. Set a budget alert at $5/month so you get a warning long before anything real happens.
 
-## Todoist
+## Google Tasks
 
-Single-user → personal API token, **no OAuth flow needed**.
-
-- Go to Todoist → Settings → Integrations → Developer.
-- Copy the **API token** (one long string).
-- Drop it in `.env` / `.dev.vars` as `TODOIST_API_TOKEN`.
-- That's it. No app registration, no redirect URL.
+- Create a task list named **Returns** if you want the app's Returns section.
+- Put return tasks in that list. Their Google Tasks due dates control urgency and ordering.
+- Existing users must sign in again after deployment to grant the new Tasks permission.
 
 ## (Optional now, required later) Apple developer for iOS PWA install
 
@@ -82,7 +81,6 @@ Put these in `.dev.vars` or `.env`:
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `GOOGLE_API_KEY`
-- `TODOIST_API_TOKEN`
 - `SESSION_SECRET`
 - `ANTHROPIC_API_KEY`
 

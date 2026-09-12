@@ -1,5 +1,3 @@
-export function todoistTaskUrl(taskId: string): string {
-  return `https://app.todoist.com/app/task/${encodeURIComponent(taskId)}`;
-}
+export const googleTasksUrl = "https://tasks.google.com/";
 
 export const fantasticalOpen = "x-fantastical3://";

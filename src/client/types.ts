@@ -45,29 +45,28 @@ export type NowState = {
   travelError: string | null;
 };
 
-export type TodoistTask = {
+export type Task = {
   id: string;
+  taskListId: string;
+  taskListTitle: string;
   content: string;
   description: string;
-  priority: number;
-  labels: string[];
-  due: { date: string; string: string; is_recurring: boolean } | null;
-  deadline?: { date: string } | null;
+  due: { date: string } | null;
+  webViewLink?: string;
 };
 
 export type TasksResponse = {
-  overdue: TodoistTask[];
-  today: TodoistTask[];
-  upcoming: TodoistTask[];
+  overdue: Task[];
+  today: Task[];
+  upcoming: Task[];
   todayKey: string;
 };
 
 export type ReturnUrgency = "overdue" | "due_today" | "due_soon" | "scheduled" | "no_date";
 
-export type ReturnItem = TodoistTask & {
+export type ReturnItem = Task & {
   urgency: ReturnUrgency;
   daysUntilDue: number | null;
-  daysUntilDeadline: number | null;
 };
 
 export type ReturnsResponse = {

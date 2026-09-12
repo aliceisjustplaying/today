@@ -630,16 +630,6 @@ a {
 .task-check:active {
   transform: scale(0.9);
 }
-.task-check[data-priority="2"] {
-  border-color: var(--indigo);
-}
-.task-check[data-priority="3"] {
-  border-color: var(--coral);
-}
-.task-check[data-priority="4"] {
-  border-color: var(--rose);
-  background: var(--rose-tint);
-}
 .task-check[data-completing="true"] {
   border-color: var(--emerald);
   background: var(--emerald);

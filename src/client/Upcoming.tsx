@@ -1,16 +1,16 @@
-import type { TasksResponse, TodoistTask } from "./types";
+import type { Task, TasksResponse } from "./types";
 import { formatDateShort } from "./format";
-import { todoistTaskUrl } from "./urls";
+import { googleTasksUrl } from "./urls";
 import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (id: string) => void;
+  onComplete: (taskListId: string, id: string) => void;
 };
 
-function groupByDate(tasks: TodoistTask[]): Map<string, TodoistTask[]> {
-  const m = new Map<string, TodoistTask[]>();
+function groupByDate(tasks: Task[]): Map<string, Task[]> {
+  const m = new Map<string, Task[]>();
   for (const t of tasks) {
     if (!t.due) continue;
     const key = t.due.date.slice(0, 10);
@@ -34,34 +34,27 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {items.map((t) => (
               <li
-                key={t.id}
-                className={`task ${completing.has(t.id) ? "task--completing" : ""}`}
+                key={`${t.taskListId}:${t.id}`}
+                className={`task ${completing.has(`${t.taskListId}:${t.id}`) ? "task--completing" : ""}`}
               >
                 <button
                   type="button"
                   className="task-check"
-                  data-priority={t.priority}
-                  data-completing={completing.has(t.id) ? "true" : undefined}
-                  onClick={() => onComplete(t.id)}
+                  data-completing={completing.has(`${t.taskListId}:${t.id}`) ? "true" : undefined}
+                  onClick={() => onComplete(t.taskListId, t.id)}
                   aria-label={`mark "${t.content}" as done`}
-                  disabled={completing.has(t.id)}
+                  disabled={completing.has(`${t.taskListId}:${t.id}`)}
                 />
                 <div className="task-body">
                   <div className="task-content">{t.content}</div>
-                  {t.labels.length > 0 && (
-                    <div className="task-labels">
-                      {t.labels.map((l) => (
-                        <span key={l} className="label-chip">
-                          {l}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="task-labels">
+                    <span className="label-chip">{t.taskListTitle}</span>
+                  </div>
                 </div>
                 <a
                   className="row-open"
-                  href={todoistTaskUrl(t.id)}
-                  aria-label="open in Todoist"
+                  href={t.webViewLink ?? googleTasksUrl}
+                  aria-label="open in Google Tasks"
                 >
                   <OpenIcon />
                 </a>

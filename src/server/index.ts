@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import auth from "./auth";
 import { sessionMiddleware, requireSession } from "./session";
-import { fetchTasksByFilter, bucketTasks, closeTask } from "./todoist";
+import { bucketTasks, completeTask, listAllTasks } from "./google-tasks";
 import { todayKeyInTz, addDaysToKey } from "./dates";
 import {
   getValidGoogleAccessToken,
@@ -29,14 +29,20 @@ app.get("/api/me", requireSession, (c) => {
 });
 
 app.get("/api/tasks", requireSession, async (c) => {
-  const tasks = await fetchTasksByFilter(
-    c.env.TODOIST_API_TOKEN,
-    "overdue | today | 7 days",
-  );
-  const today = todayKeyInTz(DEFAULT_TZ);
-  const sevenDay = addDaysToKey(today, 7);
-  const buckets = bucketTasks(tasks, today, sevenDay);
-  return c.json({ ...buckets, todayKey: today });
+  const s = c.get("session")!;
+  try {
+    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
+    const tasks = await listAllTasks(accessToken);
+    const today = todayKeyInTz(c.env.TIMEZONE || DEFAULT_TZ);
+    const sevenDay = addDaysToKey(today, 7);
+    const buckets = bucketTasks(tasks, today, sevenDay);
+    return c.json({ ...buckets, todayKey: today });
+  } catch (e) {
+    if (e instanceof GoogleReauthNeeded) {
+      return c.json({ error: "google_reauth_needed" }, 401);
+    }
+    throw e;
+  }
 });
 
 app.get("/api/events", requireSession, async (c) => {
@@ -62,12 +68,21 @@ app.get("/api/events", requireSession, async (c) => {
 });
 
 app.get("/api/returns", requireSession, async (c) => {
-  return c.json(
-    await getReturns({
-      token: c.env.TODOIST_API_TOKEN,
-      timezone: c.env.TIMEZONE || DEFAULT_TZ,
-    }),
-  );
+  const s = c.get("session")!;
+  try {
+    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
+    return c.json(
+      await getReturns({
+        accessToken,
+        timezone: c.env.TIMEZONE || DEFAULT_TZ,
+      }),
+    );
+  } catch (e) {
+    if (e instanceof GoogleReauthNeeded) {
+      return c.json({ error: "google_reauth_needed" }, 401);
+    }
+    throw e;
+  }
 });
 
 app.get("/api/now", requireSession, async (c) => {
@@ -83,13 +98,19 @@ app.get("/api/now", requireSession, async (c) => {
   }
 });
 
-app.post("/api/tasks/:id/close", requireSession, async (c) => {
+app.post("/api/tasks/:taskListId/:id/close", requireSession, async (c) => {
+  const s = c.get("session")!;
+  const taskListId = c.req.param("taskListId");
   const id = c.req.param("id");
-  if (!id) return c.json({ error: "missing_id" }, 400);
+  if (!taskListId || !id) return c.json({ error: "missing_id" }, 400);
   try {
-    await closeTask(c.env.TODOIST_API_TOKEN, id);
+    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
+    await completeTask(accessToken, taskListId, id);
     return c.json({ ok: true });
   } catch (e) {
+    if (e instanceof GoogleReauthNeeded) {
+      return c.json({ error: "google_reauth_needed" }, 401);
+    }
     return c.json({ error: String(e) }, 502);
   }
 });

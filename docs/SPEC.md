@@ -1,6 +1,6 @@
 # Personal Control Panel — Spec
 
-`today` is a personal **Now layer** above Todoist and Google Calendar. It answers the short-horizon question those tools do not answer together:
+`today` is a personal **Now layer** above Google Tasks and Google Calendar. It answers the short-horizon question those tools do not answer together:
 
 > Given the next real anchor event, current body/admin state, and travel/prep time, what is the next sane action?
 
@@ -8,14 +8,13 @@ It is not a general todo app, calendar app, or life dashboard. The default view 
 
 ## Current v0
 
-Opening the deployed app in the morning should be more useful in ten seconds than opening Todoist + Calendar and doing the time math by hand.
+Opening the deployed app in the morning should be more useful in ten seconds than opening Google Tasks + Calendar and doing the time math by hand.
 
 The current app includes:
 
 - Google sign-in with a single allowlisted email.
 - Google Calendar read access for today and tomorrow.
-- Todoist task read access through a personal API token.
-- Todoist task completion from the app.
+- Google Tasks read and completion access through the existing Google OAuth flow.
 - A Now panel centered on the next calendar anchor.
 - Body/prep state stored in D1 and used to calculate prep time.
 - Google Routes travel estimates from a configured home address to the next anchor location.
@@ -27,7 +26,7 @@ Not shipped yet:
 
 - Candidate capture.
 - Brain-dump extraction.
-- Candidate approval into Todoist.
+- Candidate approval into Google Tasks.
 - YNAB integration.
 - Email or messaging ingestion.
 - Notifications.
@@ -36,8 +35,8 @@ Not shipped yet:
 
 | Thing                                | Source / owner                                      |
 | ------------------------------------ | --------------------------------------------------- |
-| Durable tasks                        | Todoist                                             |
-| Task completion                      | Todoist API                                         |
+| Durable tasks                        | Google Tasks                                        |
+| Task completion                      | Google Tasks API                                    |
 | Hard time commitments                | Google Calendar                                     |
 | Travel time                          | Google Routes API                                   |
 | "What am I doing now / what's next?" | This app                                            |
@@ -80,11 +79,15 @@ The Calendar section lists today's events and optionally expands tomorrow's even
 
 ### Today
 
-The Today section lists Todoist tasks that are overdue or due today. Tasks can be completed from the app and opened in Todoist.
+The Today section lists Google Tasks that are overdue or due today across all task lists. Tasks can be completed from the app and opened in Google Tasks.
 
 ### Upcoming
 
-The Upcoming section lists Todoist tasks due in the next seven days, grouped by due date. Tasks can be completed from the app and opened in Todoist.
+The Upcoming section lists Google Tasks due in the next seven days, grouped by due date. Tasks can be completed from the app and opened in Google Tasks.
+
+### Returns
+
+The Returns section lists incomplete tasks from the Google Tasks list named `Returns`. Due dates determine urgency and tasks without dates remain visible at the end of the section.
 
 ## Runtime Behavior
 
@@ -98,7 +101,7 @@ GET  /api/me
 GET  /api/tasks
 GET  /api/events
 GET  /api/now
-POST /api/tasks/:id/close
+POST /api/tasks/:taskListId/:id/close
 POST /api/body-state
 ```
 
@@ -126,7 +129,6 @@ ALLOWED_EMAIL
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
 GOOGLE_API_KEY
-TODOIST_API_TOKEN
 SESSION_SECRET
 ANTHROPIC_API_KEY
 ```
@@ -209,8 +211,8 @@ D1 tables:
 
 - Show Now / Today first, not the whole backlog.
 - Do not create manual fixture data for production behavior.
-- Todoist remains the durable task source.
-- Prep/body state stays app-local and does not become Todoist tasks.
+- Google Tasks remains the durable task source.
+- Prep/body state stays app-local and does not become Google Tasks.
 - Google Calendar remains the source of hard time commitments.
 - Do not moralize about money or travel tradeoffs in UI copy.
 - AI can suggest, but the app records explicit user-approved actions.
@@ -218,7 +220,7 @@ D1 tables:
 ## Future Work
 
 - Candidate capture: brain dump → structured candidates.
-- Candidate approval: approved todo candidates write to Todoist.
+- Candidate approval: approved todo candidates write to Google Tasks.
 - Email and message scans for possible reply obligations.
 - YNAB read-only context.
 - Push notifications for event-imminent and must-not-rot cases.
