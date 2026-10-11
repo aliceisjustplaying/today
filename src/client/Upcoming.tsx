@@ -1,9 +1,9 @@
-import type { Task, TasksResponse } from "./types";
+import type { Task, TaskBuckets } from "./types";
 import { formatDateShort } from "./format";
 import { OpenIcon } from "./icons";
 
 type Props = {
-  tasks: TasksResponse | null;
+  tasks: TaskBuckets;
   completing: Set<string>;
   onComplete: (task: Task) => void;
 };
@@ -21,7 +21,7 @@ function groupByDate(tasks: Task[]): Map<string, Task[]> {
 }
 
 export function Upcoming({ tasks, completing, onComplete }: Props) {
-  if (!tasks || tasks.upcoming.length === 0) return null;
+  if (tasks.upcoming.length === 0) return null;
   const grouped = groupByDate(tasks.upcoming);
 
   return (

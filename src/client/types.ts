@@ -53,13 +53,21 @@ export type Task = {
   description: string;
   due: { date: string } | null;
   context: string;
+  team: { key: string; name: string };
   url: string;
 };
 
-export type TasksResponse = {
+export type TaskBuckets = {
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
+  undated: Task[];
+};
+
+export type TaskTab = TaskBuckets & { name: string };
+
+export type TasksResponse = {
+  tabs: TaskTab[];
   todayKey: string;
 };
 

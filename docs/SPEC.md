@@ -86,6 +86,14 @@ The Today section lists open Linear issues assigned to you (any state except com
 
 The Upcoming section lists the same assigned issues due in the next seven days, grouped by due date. Issues can be completed from the app and opened in Linear.
 
+The No date section lists the remaining open assigned issues with no due date, sorted by title, below Upcoming.
+
+### Team tabs
+
+Today, Upcoming and No date are split into tabs by Linear team. By default each team with open assigned issues gets its own tab (a team with none gets no tab), named after the team. `LINEAR_TABS` overrides this: `Name=TEAMKEY[,TEAMKEY…];Name=…` (for example `Life=BEL;Dev=DEV`). Configured tabs come first in the given order and are shown even when empty; any team not mapped still gets its own tab so nothing is hidden. The tab bar only appears with two or more tabs; each tab shows its overdue + due-today count, and the chosen tab is remembered on the device.
+
+Calendar, Now and Returns stay outside the tabs: they are not Linear team views, and Returns is a single cross-team list.
+
 ### Returns
 
 The Returns section lists open Linear issues carrying the label named by `LINEAR_RETURNS_LABEL` (default `Returns`, case-insensitive), whoever they are assigned to. It is merged across all configured workspaces. Due dates determine urgency and issues without dates remain visible at the end of the section.
@@ -136,6 +144,7 @@ Optional:
 ```txt
 GOOGLE_OAUTH_REDIRECT_URI
 LINEAR_RETURNS_LABEL
+LINEAR_TABS
 GOOGLE_API_KEY
 HOME_ADDRESS
 TIMEZONE

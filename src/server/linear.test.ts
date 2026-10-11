@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { bucketTasks, completeIssue, LinearError, listAssignedIssues, type Task } from "./linear";
+import { bucketTasks, completeIssue, LinearError, listAssignedIssues, parseTabs, tabTasks, type Task } from "./linear";
 import { getReturns } from "./returns";
 
 type Call = { query: string; variables: Record<string, unknown>; auth: string | null };
@@ -31,13 +31,13 @@ function issue(overrides: Partial<Record<string, unknown>> = {}) {
     description: null,
     dueDate: "2026-10-11",
     url: "https://linear.app/alice/issue/ALI-1",
-    team: { key: "ALI" },
+    team: { key: "ALI", name: "Alice" },
     project: null,
     ...overrides,
   };
 }
 
-function task(content: string, date: string | null): Task {
+function task(content: string, date: string | null, team = "ALI"): Task {
   return {
     id: content,
     workspace: 0,
@@ -45,7 +45,8 @@ function task(content: string, date: string | null): Task {
     content,
     description: "",
     due: date ? { date } : null,
-    context: "ALI",
+    context: team,
+    team: { key: team, name: team === "ALI" ? "Alice" : team.toLowerCase() },
     url: "",
   };
 }
@@ -91,6 +92,7 @@ describe("listAssignedIssues", () => {
         description: "",
         due: { date: "2026-10-11" },
         context: "ALI",
+        team: { key: "ALI", name: "Alice" },
         url: "https://linear.app/alice/issue/ALI-1",
       },
       expect.objectContaining({ identifier: "ALI-2", context: "Flat" }),
@@ -227,5 +229,51 @@ describe("bucketTasks", () => {
     expect(buckets.overdue.map((t) => t.content)).toEqual(["a-late", "b-late"]);
     expect(buckets.today.map((t) => t.content)).toEqual(["today"]);
     expect(buckets.upcoming.map((t) => t.content)).toEqual(["soon"]);
+    expect(buckets.undated.map((t) => t.content)).toEqual(["undated"]);
+  });
+});
+
+describe("tabs", () => {
+  test("parses LINEAR_TABS", () => {
+    expect(parseTabs(" Life = BEL ; Work=dev, ops;bad;=X")).toEqual([
+      { name: "Life", teams: ["BEL"] },
+      { name: "Work", teams: ["DEV", "OPS"] },
+    ]);
+    expect(parseTabs(undefined)).toEqual([]);
+  });
+
+  const tasks = [
+    task("dev-today", "2026-10-11", "DEV"),
+    task("life-undated", null, "BEL"),
+    task("life-soon", "2026-10-12", "BEL"),
+    task("ops-late", "2026-10-01", "OPS"),
+  ];
+
+  test("defaults to one tab per team, named after the team", () => {
+    const tabs = tabTasks(tasks, [], "2026-10-11", "2026-10-18");
+    expect(tabs.map((t) => t.name)).toEqual(["bel", "dev", "ops"]);
+    expect(tabs[0]).toMatchObject({
+      upcoming: [expect.objectContaining({ content: "life-soon" })],
+      undated: [expect.objectContaining({ content: "life-undated" })],
+    });
+  });
+
+  test("configured tabs come first (even when empty); unmapped teams still get their own tab", () => {
+    const tabs = tabTasks(
+      tasks,
+      [
+        { name: "Life", teams: ["BEL"] },
+        { name: "Empty", teams: ["NONE"] },
+        { name: "Work", teams: ["DEV"] },
+      ],
+      "2026-10-11",
+      "2026-10-18",
+    );
+    expect(tabs.map((t) => [t.name, t.overdue.length, t.today.length, t.upcoming.length, t.undated.length])).toEqual([
+      ["Life", 0, 0, 1, 1],
+      ["Empty", 0, 0, 0, 0],
+      ["Work", 0, 1, 0, 0],
+      ["ops", 1, 0, 0, 0],
+    ]);
   });
 });

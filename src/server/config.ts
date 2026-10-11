@@ -1,3 +1,5 @@
+import { parseTabs, type TabConfig } from "./linear";
+
 const REQUIRED = [
   "ALLOWED_EMAIL",
   "GOOGLE_OAUTH_CLIENT_ID",
@@ -15,6 +17,7 @@ export type Config = {
   SESSION_SECRET: string;
   LINEAR_API_KEYS: string[];
   LINEAR_RETURNS_LABEL: string;
+  LINEAR_TABS: TabConfig[];
   TIMEZONE: string;
   TRANSPORT_DEFAULT: string;
   TRANSPORT_RESCUE: string;
@@ -51,6 +54,7 @@ export function loadConfig(env: EnvSource = process.env): Config {
     SESSION_SECRET: value("SESSION_SECRET")!,
     LINEAR_API_KEYS: linearApiKeys,
     LINEAR_RETURNS_LABEL: value("LINEAR_RETURNS_LABEL") ?? "Returns",
+    LINEAR_TABS: parseTabs(value("LINEAR_TABS")),
     TIMEZONE: value("TIMEZONE") ?? "Europe/London",
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",
