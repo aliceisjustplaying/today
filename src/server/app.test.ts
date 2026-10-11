@@ -102,6 +102,21 @@ describe("app", () => {
     expect(await res.text()).toBe("console.log('app')");
   });
 
+  test("hashed assets are immutable and everything else revalidates", async () => {
+    const asset = await app.request("/assets/app.js", {}, env);
+    expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    for (const path of ["/", "/index.html", "/some/client/route", "/privacy/"]) {
+      const res = await app.request(path, {}, env);
+      expect(res.headers.get("cache-control")).toBe("no-cache");
+    }
+  });
+
+  test("a missing hashed asset is a 404, not index.html", async () => {
+    const res = await app.request("/assets/index-old.js", {}, env);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type")).not.toContain("text/html");
+  });
+
   test("serves the privacy page without a session", async () => {
     for (const path of ["/privacy", "/privacy/"]) {
       const res = await app.request(path, {}, env);

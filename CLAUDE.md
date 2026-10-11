@@ -7,7 +7,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - Runtime: **Bun**. Hono app in `src/server/index.ts`; the process entry `src/server/main.ts` loads config, opens SQLite, runs migrations and calls `Bun.serve`. Production is a systemd service on Alice's NixOS VPS behind Caddy (packaged in the nixfiles repo).
 - Config: environment variables parsed once by `src/server/config.ts` and passed to Hono as `c.env` together with the Drizzle handle (`c.env.db`). Add new settings there, not as ad-hoc `process.env` reads.
 - DB: **SQLite** via `bun:sqlite` + Drizzle (`src/server/db/index.ts`); schema in `src/server/db/schema.ts`, migrations in `drizzle/migrations` applied at startup.
-- Frontend: **React 19 + Vite**, built to `dist/client` and served by the same Hono app (`serveStatic`, SPA fallback to `index.html`).
+- Frontend: **React 19 + Vite**, built to `dist/client` and served by the same Hono app (`src/server/static.ts`: `serveStatic`, SPA fallback to `index.html`, `/assets/*` immutable, everything else `no-cache`, a missing asset is a 404). The build stamps one id into `index.html`, `version.json` and the service worker `sw.js` (`scripts/stamp-build.ts`, worker source in `src/sw.js`). The page compares its id with `version.json` on resume and reloads into a new deploy before rendering any new API data (`src/client/updates.ts`).
 - Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Google Calendar uses the stored OAuth grant.
 - Tasks: **Linear** via GraphQL with personal API keys, one per workspace (`LINEAR_API_KEY` / `LINEAR_API_KEYS` → `c.env.LINEAR_API_KEYS`, `src/server/linear.ts`). Every list query fans out across keys and tags each task with its `workspace` index; completion uses that index to pick the key. `/api/tasks` returns `tabs` (one per team, or grouped by `LINEAR_TABS`), each with overdue/today/upcoming/undated buckets. Today/Upcoming are `viewer.assignedIssues` (open states, by `dueDate`); Returns are issues with the `LINEAR_RETURNS_LABEL` label regardless of assignee; completing is `issueUpdate` to the team's completed state.
 - Limits: `/api/limits` proxies the `limits` service's `/api/summary` (`LIMITS_URL`, default `http://127.0.0.1:8790`, 5 s timeout) and returns a 502 `{error}` when it's down; the SPA shows it as a Limits tab next to the Linear team tabs (`src/client/Limits.tsx`).
@@ -36,6 +36,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - `bun run start` — production server
 - `bun run typecheck` — `tsgo --noEmit`
 - `bun test` — server tests (in-memory SQLite, `app.request`)
+- `bun run test:e2e` — Playwright WebKit tests for the PWA lifecycle (resume, redeploy, service worker, offline) against `e2e/server.ts`, a harness with canned API responses; run `bun run build` first
 - `bun run db:generate` — diff schema → generate migration
 - `bun run db:migrate [d1-export.sql]` — apply migrations to `DATABASE_PATH`; with a file, import a `wrangler d1 export` dump
 - Prod logs: `journalctl -u today` on the VPS

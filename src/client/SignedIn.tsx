@@ -16,6 +16,8 @@ import { Returns } from "./Returns";
 import { Events } from "./Events";
 import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
+import { onResume, signInAgain } from "./resume";
+import { reloadIfStale, supersededByDeploy } from "./updates";
 
 export function SignedIn({ me }: { me: Me }) {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now.v2"));
@@ -36,11 +38,12 @@ export function SignedIn({ me }: { me: Me }) {
     try {
       const r = await fetch("/api/now");
       if (r.status === 401) {
-        window.location.href = "/auth/google/start";
+        signInAgain();
         return;
       }
       if (!r.ok) throw new Error(`now ${r.status}`);
       const data = (await r.json()) as NowState;
+      if (await supersededByDeploy()) return;
       setNow(data);
       setCached("now.v2", data);
       setError(null);
@@ -53,11 +56,12 @@ export function SignedIn({ me }: { me: Me }) {
     try {
       const r = await fetch("/api/tasks");
       if (r.status === 401) {
-        window.location.href = "/auth/google/start";
+        signInAgain();
         return;
       }
       if (!r.ok) throw new Error(`tasks ${r.status}`);
       const data = (await r.json()) as TasksResponse;
+      if (await supersededByDeploy()) return;
       setTasks(data);
       setCached("tasks.linear.v2", data);
     } catch (e) {
@@ -70,6 +74,7 @@ export function SignedIn({ me }: { me: Me }) {
       const r = await fetch("/api/events");
       if (r.ok) {
         const data = (await r.json()) as EventsResponse;
+        if (await supersededByDeploy()) return;
         setEvents(data);
         setCached("events", data);
       }
@@ -82,11 +87,12 @@ export function SignedIn({ me }: { me: Me }) {
     try {
       const r = await fetch("/api/returns");
       if (r.status === 401) {
-        window.location.href = "/auth/google/start";
+        signInAgain();
         return;
       }
       if (!r.ok) throw new Error(`returns ${r.status}`);
       const data = (await r.json()) as ReturnsResponse;
+      if (await supersededByDeploy()) return;
       setReturns(data);
       setCached("returns.linear", data);
     } catch (e) {
@@ -95,21 +101,22 @@ export function SignedIn({ me }: { me: Me }) {
   }, []);
 
   useEffect(() => {
-    loadNow();
-    loadTasks();
-    loadEvents();
-    loadReturns();
-    const interval = window.setInterval(loadNow, 60_000);
-    const onFocus = () => {
+    const loadAll = () => {
+      reloadIfStale();
       loadNow();
       loadTasks();
       loadEvents();
       loadReturns();
     };
-    window.addEventListener("focus", onFocus);
+    loadAll();
+    const interval = window.setInterval(() => {
+      reloadIfStale();
+      loadNow();
+    }, 60_000);
+    const stopResume = onResume(loadAll);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
+      stopResume();
     };
   }, [loadNow, loadTasks, loadEvents, loadReturns]);
 
@@ -176,7 +183,7 @@ export function SignedIn({ me }: { me: Me }) {
           method: "POST",
         });
         if (r.status === 401) {
-          window.location.href = "/auth/google/start";
+          signInAgain();
           return;
         }
         if (!r.ok) throw new Error(`close ${r.status}`);
