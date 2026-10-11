@@ -184,7 +184,8 @@ describe("limits formatting", () => {
       title: "$29.20 used of $1,120.00 · $29.20 this month · ~$85.25 by month end",
       sources: ["Credit grant · $90.80 of $100.00 left", "Credit grant · $1,000.00 of $1,000.00 left"],
     });
-    expect(planChip(capy)).toBe("Lite · renews Oct 16");
+    expect(planChip(capy)).toBe("Lite · ends Oct 16");
+    expect(planChip({ ...capy, plan: { ...plan, canceledAt: null } })).toBe("Lite · renews Oct 16");
   });
 
   test("plan chips use the upstream's name, flag a lapsed plan, and stay off when unknown", () => {
