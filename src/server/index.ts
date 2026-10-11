@@ -11,6 +11,7 @@ import {
 } from "./google";
 import { computeNowState, updateBodyState } from "./now";
 import { getReturns } from "./returns";
+import { fetchLimitsSummary, LimitsUnavailable } from "./limits";
 import { completeIssue, LinearError, listAssignedIssues, tabTasks } from "./linear";
 import type { Env } from "./env";
 
@@ -86,6 +87,15 @@ app.get("/api/now", requireSession, async (c) => {
     if (e instanceof GoogleReauthNeeded) {
       return c.json({ error: "google_reauth_needed" }, 401);
     }
+    throw e;
+  }
+});
+
+app.get("/api/limits", requireSession, async (c) => {
+  try {
+    return c.json(await fetchLimitsSummary(c.env.LIMITS_URL));
+  } catch (e) {
+    if (e instanceof LimitsUnavailable) return c.json({ error: e.message }, 502);
     throw e;
   }
 });

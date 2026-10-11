@@ -18,6 +18,7 @@ export type Config = {
   LINEAR_API_KEYS: string[];
   LINEAR_RETURNS_LABEL: string;
   LINEAR_TABS: TabConfig[];
+  LIMITS_URL: string;
   TIMEZONE: string;
   TRANSPORT_DEFAULT: string;
   TRANSPORT_RESCUE: string;
@@ -55,6 +56,7 @@ export function loadConfig(env: EnvSource = process.env): Config {
     LINEAR_API_KEYS: linearApiKeys,
     LINEAR_RETURNS_LABEL: value("LINEAR_RETURNS_LABEL") ?? "Returns",
     LINEAR_TABS: parseTabs(value("LINEAR_TABS")),
+    LIMITS_URL: value("LIMITS_URL") ?? "http://127.0.0.1:8790",
     TIMEZONE: value("TIMEZONE") ?? "Europe/London",
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",

@@ -74,6 +74,7 @@ describe("config", () => {
     expect(env.BUFFER_MINUTES).toBe("10");
     expect(env.PORT).toBe(8788);
     expect(env.LINEAR_RETURNS_LABEL).toBe("Returns");
+    expect(env.LIMITS_URL).toBe("http://127.0.0.1:8790");
   });
 });
 
@@ -138,6 +139,34 @@ describe("app", () => {
 
       const bad = await app.request("/api/tasks/2/uuid-9/close", { method: "POST", headers: { cookie } }, multi);
       expect(bad.status).toBe(400);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  test("/api/limits proxies the limits summary behind the session", async () => {
+    expect((await app.request("/api/limits", {}, env)).status).toBe(401);
+
+    const cookie = await sessionCookie();
+    const summary = { generatedAt: 1, accounts: [], errors: [] };
+    const realFetch = globalThis.fetch;
+    const urls: string[] = [];
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      urls.push(String(url));
+      return Response.json(summary);
+    }) as typeof fetch;
+    try {
+      const ok = await app.request("/api/limits", { headers: { cookie } }, { ...env, LIMITS_URL: "http://limits.test:9" });
+      expect(ok.status).toBe(200);
+      expect(await ok.json()).toEqual(summary);
+      expect(urls).toEqual(["http://limits.test:9/api/summary"]);
+
+      globalThis.fetch = (async () => {
+        throw new TypeError("connection refused");
+      }) as unknown as typeof fetch;
+      const down = await app.request("/api/limits", { headers: { cookie } }, env);
+      expect(down.status).toBe(502);
+      expect(await down.json()).toEqual({ error: "limits unreachable: connection refused" });
     } finally {
       globalThis.fetch = realFetch;
     }
