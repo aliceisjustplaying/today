@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatDuration, formatLondonTime, projectionLabel, resetLabel, spendLines, windowTone } from "./limits-format";
+import { formatDuration, formatLondonTime, projectionLabel, resetLabel, spendLines, statusLabel, windowTone } from "./limits-format";
 import type { LimitsAccount, LimitsWindow } from "./types";
 
 const now = Date.parse("2026-10-11T12:00:00Z");
@@ -44,5 +44,22 @@ describe("limits formatting", () => {
     } as LimitsAccount;
     expect(spendLines(capy)).toEqual(["$41.50 credits this month", "$4.15/day · ~$128.65 by month end", "$241.50 incl. subscriptions"]);
     expect(spendLines({} as LimitsAccount)).toEqual([]);
+  });
+
+  test("inactive is a neutral renew pill, other statuses pass through", () => {
+    const account = (status: LimitsAccount["status"]): LimitsAccount => ({
+      id: "opencode-go:main",
+      provider: "opencode-go",
+      label: "Go",
+      status,
+      error: null,
+      notice: status === "inactive" ? "Go subscription inactive, renew to use" : null,
+      lastAttemptAt: now,
+      observedAt: null,
+      windows: [],
+    });
+    expect(statusLabel(account("inactive"))).toBe("inactive · renew");
+    expect(statusLabel(account("ok"))).toBe("ok");
+    expect(statusLabel(account("error"))).toBe("error");
   });
 });
