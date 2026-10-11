@@ -69,8 +69,9 @@ export function projectionLabel(w: LimitsWindow, now: number): string | null {
   return null;
 }
 
+/** "$4.20", or "-$0.12" when usage has run past the credits. */
 export function money(n: number): string {
-  return `$${n.toFixed(2)}`;
+  return `${n <= -0.005 ? "-" : ""}$${Math.abs(n).toFixed(2)}`;
 }
 
 export function spendLines(a: LimitsAccount): string[] {
