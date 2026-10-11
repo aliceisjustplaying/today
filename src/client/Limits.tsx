@@ -11,6 +11,7 @@ import {
   clampPercent,
   isBalanceOnly,
   parseDollars,
+  planChip,
   projectionLabel,
   resetLabel,
   resetTitle,
@@ -128,9 +129,13 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
 
 /** The account's name with its email underneath, both cut with an ellipsis rather than wrapping. */
 function AccountTitle({ account: a, heading }: { account: LimitsAccount; heading?: boolean }) {
+  const chip = planChip(a);
   return (
     <div className="limits-title">
-      {heading ? <h2 className="limits-name">{a.label}</h2> : <span className="limits-balance-name">{a.label}</span>}
+      <div className="limits-name-row">
+        {heading ? <h2 className="limits-name">{a.label}</h2> : <span className="limits-balance-name">{a.label}</span>}
+        {chip && <span className="limits-plan">{chip}</span>}
+      </div>
       {a.email && (
         <span className="limits-email" title={a.email}>
           {a.email}
@@ -217,12 +222,13 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
 
 function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <section className="section limits-card limits-balances">
       <h2 className="limits-name limits-balances-title">Balances</h2>
       <ul className="limits-balance-list">
         {accounts.map((a) => {
-          const { amount, detail, tone, title } = balanceRow(a);
+          const { amount, detail, tone, title, sources } = balanceRow(a);
           return (
             <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status} data-tone={tone}>
               <ProviderLogo provider={a.provider} />
@@ -244,12 +250,30 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
                 >
                   {amount ?? "set balance"}
                 </button>
+              ) : sources?.length ? (
+                <button
+                  type="button"
+                  className="limits-balance-amount limits-balance-edit num"
+                  title={title}
+                  aria-expanded={expanded === a.id}
+                  onClick={() => setExpanded(expanded === a.id ? null : a.id)}
+                >
+                  {amount}
+                </button>
               ) : (
                 <span className="limits-balance-amount num" title={title}>
                   {amount}
                 </span>
               )}
               {detail && <span className="limits-balance-detail num">{detail}</span>}
+              {expanded === a.id && sources && (
+                <ul className="limits-balance-sources">
+                  {title && <li>{title}</li>}
+                  {sources.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              )}
             </li>
           );
         })}

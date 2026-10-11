@@ -69,9 +69,10 @@ export function projectionLabel(w: LimitsWindow, now: number): string | null {
   return null;
 }
 
-/** "$4.20", or "-$0.12" when usage has run past the credits. */
+/** "$4.20", "$1,090.80", or "-$0.12" when usage has run past the credits. */
 export function money(n: number): string {
-  return `${n <= -0.005 ? "-" : ""}$${Math.abs(n).toFixed(2)}`;
+  const digits = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${n <= -0.005 ? "-" : ""}$${digits}`;
 }
 
 export function spendLines(a: LimitsAccount): string[] {
@@ -122,6 +123,8 @@ export type BalanceRow = {
   /** "low" at 7 days left or fewer, "out" at 2 or fewer or at $0. */
   tone?: "low" | "out";
   title?: string;
+  /** Capy's credit sources, shown when the amount is tapped: "Credit grant · $90.80 of $100.00 left". */
+  sources?: string[];
 };
 
 /** A Balances row: the headline amount and a muted detail. */
@@ -134,6 +137,15 @@ export function balanceRow(a: LimitsAccount): BalanceRow {
     const p = a.spendUsd.projection.credits;
     const monthEnd = p ? `~${money(p.projectedAtEnd)} by month end` : null;
     const thisMonth = `${money(a.spendUsd.credits)} this month`;
+    if (a.billing && a.balanceUsd) {
+      return {
+        amount: `${money(a.balanceUsd.balance)} left`,
+        detail: b?.daysLeft != null ? `~${Math.max(0, Math.round(b.daysLeft))} days at ${money(b.perDay)}/day` : null,
+        tone,
+        title: [`${money(a.billing.usedUsd)} used of ${money(a.billing.grantedUsd)}`, thisMonth, monthEnd].filter(Boolean).join(" · "),
+        sources: a.billing.sources.map((s) => `${s.name} · ${money(s.remainingUsd)} of ${money(s.grantedUsd)} left`),
+      };
+    }
     if (a.balanceUsd) {
       return {
         amount: `${money(Math.max(0, a.balanceUsd.balance))} left`,
@@ -174,4 +186,18 @@ export function cardNotice(a: LimitsAccount): string | null {
 /** The status pill: a lapsed subscription is neutral, not a red error. */
 export function statusLabel(a: LimitsAccount): string {
   return a.status;
+}
+
+/**
+ * The plan chip beside the name: "Max 20x", "Go inactive", Capy's "Lite · renews Oct 16". Null when unknown or
+ * when it would only repeat the name; an inactive card's pill already says the plan lapsed.
+ */
+export function planChip(a: LimitsAccount): string | null {
+  const plan = a.plan;
+  if (!plan) return null;
+  const name = a.provider === "capy" ? plan.name.replace(/^Capy\s+/, "") : plan.name;
+  if (plan.status !== "active") return a.status === "inactive" ? name : `${name} ${plan.status}`;
+  if (name === a.label) return null;
+  if (plan.renewsAt == null) return name;
+  return `${name} · renews ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone: TIMEZONE, month: "short", day: "numeric" })}`;
 }

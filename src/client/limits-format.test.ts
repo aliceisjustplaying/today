@@ -8,6 +8,7 @@ import {
   isBalanceOnly,
   money,
   parseDollars,
+  planChip,
   projectionLabel,
   resetLabel,
   resetTitle,
@@ -151,6 +152,49 @@ describe("limits formatting", () => {
     expect(left(29, 7).tone).toBe("low");
     expect(left(8.3, 2).tone).toBe("out");
     expect(left(-3, -0.7)).toMatchObject({ amount: "$0.00 left", detail: "$41.50 this month · ~0 days left at $4.15/day", tone: "out" });
+  });
+
+  test("Capy with a session: dollars left, days at $/day, grants on tap; no set balance", () => {
+    const spendUsd = { credits: 29.2, total: 50, periodEnd: null, projection: { credits: { perDay: 2.75, projectedAtEnd: 85.25 }, total: null } };
+    const plan = { name: "Capy Lite", status: "active", canceledAt: Date.parse("2026-10-09T19:36:23Z"), renewsAt: Date.parse("2026-10-16T18:55:08Z") };
+    const capy = acct({
+      provider: "capy",
+      balanceSettable: false,
+      spendUsd,
+      plan,
+      balanceUsd: { balance: 1090.79856, burn: { perDay: 2.75, daysLeft: 396.65 } },
+      billing: {
+        remainingUsd: 1090.79856,
+        usedUsd: 29.20143,
+        grantedUsd: 1120,
+        unlimited: false,
+        plan,
+        sources: [
+          { name: "Credit grant", kind: "grant", grantedUsd: 100, remainingUsd: 90.79856, resetsAt: null, expiresAt: null },
+          { name: "Credit grant", kind: "grant", grantedUsd: 1000, remainingUsd: 1000, resetsAt: null, expiresAt: null },
+        ],
+      },
+    });
+    expect(balanceRow(capy)).toEqual({
+      amount: "$1,090.80 left",
+      detail: "~397 days at $2.75/day",
+      tone: undefined,
+      title: "$29.20 used of $1,120.00 · $29.20 this month · ~$85.25 by month end",
+      sources: ["Credit grant · $90.80 of $100.00 left", "Credit grant · $1,000.00 of $1,000.00 left"],
+    });
+    expect(planChip(capy)).toBe("Lite · renews Oct 16");
+  });
+
+  test("plan chips use the upstream's name, flag a lapsed plan, and stay off when unknown", () => {
+    const plan = (name: string, status = "active", renewsAt: number | null = null) => ({ name, status, renewsAt, canceledAt: null });
+    expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }))).toBe("Max 20x");
+    expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }))).toBe("SuperGrok");
+    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }))).toBeNull();
+    expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }))).toBe("Go");
+    expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }))).toBe("Go inactive");
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }))).toBe("Go · renews Nov 1");
+    expect(planChip(acct({ plan: null }))).toBeNull();
+    expect(planChip(acct({}))).toBeNull();
   });
 
   test("typed balances parse as dollars", () => {
