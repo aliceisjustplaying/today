@@ -134,6 +134,17 @@ export type LimitsAccount = {
   balanceAnchor?: { balanceUsd: number; asOf: number } | null;
   /** True where today can set the balance anchor (Capy). */
   balanceSettable?: boolean;
+  /** The subscription as the upstream names it ("Max 20x", "Pro", "SuperGrok", "Go", "Capy Lite"); null when it doesn't say. */
+  plan?: { name: string; status: string; renewsAt: number | null; canceledAt: number | null } | null;
+  /** Capy with a web session: the billing page's plan, totals and credit sources, in dollars. */
+  billing?: {
+    remainingUsd: number;
+    usedUsd: number;
+    grantedUsd: number;
+    unlimited: boolean;
+    plan: { name: string; status: string; canceledAt: number | null; renewsAt: number | null } | null;
+    sources: { name: string; kind: string; grantedUsd: number; remainingUsd: number; resetsAt: number | null; expiresAt: number | null }[];
+  } | null;
   spendUsd?: {
     credits: number;
     total: number;
