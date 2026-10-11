@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "./db";
 import { bodyState } from "./db/schema";
+import type { AppEnv } from "./env";
 import {
   getValidGoogleAccessToken,
   listAllCalendarEvents,
@@ -25,8 +25,8 @@ export const PREP_DURATIONS = {
 export type PrepKey = keyof typeof PREP_DURATIONS;
 export type BodyStateRow = typeof bodyState.$inferSelect;
 
-export async function ensureBodyState(env: Cloudflare.Env): Promise<BodyStateRow> {
-  const existing = await db(env.DB)
+export async function ensureBodyState(env: AppEnv): Promise<BodyStateRow> {
+  const existing = await env.db
     .select()
     .from(bodyState)
     .where(eq(bodyState.id, 1))
@@ -34,7 +34,7 @@ export async function ensureBodyState(env: Cloudflare.Env): Promise<BodyStateRow
   if (existing[0]) return existing[0];
 
   const now = new Date();
-  await db(env.DB).insert(bodyState).values({
+  await env.db.insert(bodyState).values({
     id: 1,
     eaten: false,
     showered: false,
@@ -44,7 +44,7 @@ export async function ensureBodyState(env: Cloudflare.Env): Promise<BodyStateRow
     runningLate: false,
     updatedAt: now,
   });
-  const seeded = await db(env.DB)
+  const seeded = await env.db
     .select()
     .from(bodyState)
     .where(eq(bodyState.id, 1))
@@ -120,7 +120,7 @@ function anchorStartIso(e: CalendarEvent): string {
 }
 
 export async function computeNowState(
-  env: Cloudflare.Env,
+  env: AppEnv,
   userSub: string,
 ): Promise<NowState> {
   const now = new Date();
@@ -236,7 +236,7 @@ const ALLOWED_FIELDS = [
 type AllowedField = (typeof ALLOWED_FIELDS)[number];
 
 export async function updateBodyState(
-  env: Cloudflare.Env,
+  env: AppEnv,
   updates: Partial<Record<AllowedField, boolean>>,
 ): Promise<BodyStateRow> {
   await ensureBodyState(env);
@@ -245,12 +245,12 @@ export async function updateBodyState(
     if (typeof updates[key] === "boolean") filtered[key] = updates[key];
   }
   if (Object.keys(filtered).length > 0) {
-    await db(env.DB)
+    await env.db
       .update(bodyState)
       .set({ ...filtered, updatedAt: new Date() })
       .where(eq(bodyState.id, 1));
   }
-  const rows = await db(env.DB)
+  const rows = await env.db
     .select()
     .from(bodyState)
     .where(eq(bodyState.id, 1))

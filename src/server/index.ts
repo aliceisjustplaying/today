@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import auth from "./auth";
 import { sessionMiddleware, requireSession } from "./session";
 import { bucketTasks, completeTask, listAllTasks } from "./google-tasks";
@@ -12,8 +13,6 @@ import {
 import { computeNowState, updateBodyState } from "./now";
 import { getReturns } from "./returns";
 import type { Env } from "./env";
-
-const DEFAULT_TZ = "Europe/London";
 
 const app = new Hono<Env>();
 
@@ -33,7 +32,7 @@ app.get("/api/tasks", requireSession, async (c) => {
   try {
     const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
     const tasks = await listAllTasks(accessToken);
-    const today = todayKeyInTz(c.env.TIMEZONE || DEFAULT_TZ);
+    const today = todayKeyInTz(c.env.TIMEZONE);
     const sevenDay = addDaysToKey(today, 7);
     const buckets = bucketTasks(tasks, today, sevenDay);
     return c.json({ ...buckets, todayKey: today });
@@ -74,7 +73,7 @@ app.get("/api/returns", requireSession, async (c) => {
     return c.json(
       await getReturns({
         accessToken,
-        timezone: c.env.TIMEZONE || DEFAULT_TZ,
+        timezone: c.env.TIMEZONE,
       }),
     );
   } catch (e) {
@@ -127,6 +126,9 @@ app.post("/api/body-state", requireSession, async (c) => {
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
-app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
+app.use("*", (c, next) => serveStatic({ root: c.env.STATIC_DIR })(c, next));
+app.get("*", (c, next) =>
+  serveStatic({ root: c.env.STATIC_DIR, path: "index.html" })(c, next),
+);
 
 export default app;

@@ -6,18 +6,10 @@ Steps inside each section are intentionally unnumbered (they may change order).
 
 ---
 
-## Cloudflare
+## Server
 
-- Confirm your domain is on Cloudflare if you want a custom domain.
-- Install Wrangler dependencies with `bun install`, then run `bunx wrangler login` from the repo.
-- Note your **Cloudflare Account ID**. Find it in the Cloudflare dashboard right sidebar of any domain's overview page.
-- Decide on the **Worker name**. Default: `today`.
-- Create the D1 database with `bunx wrangler d1 create today`, then put its `database_id` in `.dev.vars` / `.env` as `CLOUDFLARE_D1_DATABASE_ID`.
-
-## DNS
-
-- For a custom domain, set `CLOUDFLARE_CUSTOM_DOMAIN` in `.dev.vars` / `.env`.
-- Confirm you can edit DNS for the domain in Cloudflare.
+- today runs as a Bun process (`bun run start`) behind a TLS reverse proxy. The production host is the NixOS VPS; its package, systemd unit and Caddy vhost live in the nixfiles repo.
+- Pick the public hostname and point a DNS A record at the host before the first deploy, so the proxy can get a certificate.
 
 ## Google Cloud (Calendar + Tasks + Routes)
 
@@ -45,7 +37,7 @@ This is the longest section. All in https://console.cloud.google.com.
 - **Routes API key** (APIs & Services → Credentials → Create credentials → API key):
   - Name: `Today Routes`
   - Click **Edit API key** → API restrictions → **Restrict key** → select only **Routes API**
-  - Application restrictions: leave **None** for v0 (Workers don't have stable IPs to allowlist, and we'll be calling from the Worker server-side). We can lock it down later by switching to a Cloudflare Worker IP range allowlist if abuse becomes a concern.
+  - Application restrictions: **IP addresses**, set to the server's public IP (calls are server-side), or **None** while developing locally.
   - Save and copy the **API key**.
 - **Billing**: Google Cloud requires a billing account on the project for Routes API even though there's a $200/month free credit. Attach a card. Set a budget alert at $5/month so you get a warning long before anything real happens.
 
@@ -64,24 +56,18 @@ This is the longest section. All in https://console.cloud.google.com.
 After you finish the above, make sure:
 
 - Bun is installed and `bun --version` works.
-- You can run `bunx wrangler whoami` and it can find your CF account once you `wrangler login`.
-- `.dev.vars` contains the values from `.dev.vars.example`.
-- `bun run wrangler:config` writes `wrangler.local.jsonc`.
+- `.env` contains the required values from `.env.example`.
+- `bun run db:migrate` creates `data/today.sqlite`.
 
 ---
 
 ## What I need from you at the end
 
-Put these in `.dev.vars` or `.env`:
+Put these in `.env` locally, or in the server's environment / credentials in production:
 
-- `CLOUDFLARE_D1_DATABASE_ID`
-- `CLOUDFLARE_CUSTOM_DOMAIN` (optional)
-- `GOOGLE_OAUTH_REDIRECT_URI`
 - `ALLOWED_EMAIL`
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_API_KEY`
 - `SESSION_SECRET`
-- `ANTHROPIC_API_KEY`
-
-Run `bun run wrangler:config` after changing deployment config.
+- `GOOGLE_OAUTH_REDIRECT_URI` (production)
+- `GOOGLE_API_KEY` and `HOME_ADDRESS` (travel estimates)

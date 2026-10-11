@@ -1,7 +1,6 @@
 import type { MiddlewareHandler, Context } from "hono";
 import { getSignedCookie, setSignedCookie, deleteCookie } from "hono/cookie";
 import { eq } from "drizzle-orm";
-import { db } from "./db";
 import { sessions } from "./db/schema";
 import type { Env } from "./env";
 
@@ -22,7 +21,7 @@ export async function createSession(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000);
 
-  await db(c.env.DB).insert(sessions).values({
+  await c.env.db.insert(sessions).values({
     id,
     userSub: opts.userSub,
     email: opts.email,
@@ -30,7 +29,8 @@ export async function createSession(
     expiresAt,
   });
 
-  const secure = new URL(c.req.url).protocol === "https:";
+  const secure =
+    new URL(c.env.GOOGLE_OAUTH_REDIRECT_URI ?? c.req.url).protocol === "https:";
   await setSignedCookie(c, COOKIE_NAME, id, c.env.SESSION_SECRET, {
     httpOnly: true,
     secure,
@@ -44,7 +44,7 @@ export async function readSession(c: Context<Env>) {
   const sid = await getSignedCookie(c, c.env.SESSION_SECRET, COOKIE_NAME);
   if (!sid) return null;
 
-  const rows = await db(c.env.DB)
+  const rows = await c.env.db
     .select()
     .from(sessions)
     .where(eq(sessions.id, sid))
@@ -60,7 +60,7 @@ export async function readSession(c: Context<Env>) {
 export async function destroySession(c: Context<Env>): Promise<void> {
   const sid = await getSignedCookie(c, c.env.SESSION_SECRET, COOKIE_NAME);
   if (sid) {
-    await db(c.env.DB).delete(sessions).where(eq(sessions.id, sid));
+    await c.env.db.delete(sessions).where(eq(sessions.id, sid));
   }
   deleteCookie(c, COOKIE_NAME, { path: "/" });
 }

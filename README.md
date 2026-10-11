@@ -4,59 +4,66 @@ The Now layer above Google Tasks + Google Calendar + YNAB. See `docs/SPEC.md` fo
 
 ## Stack
 
-Cloudflare Workers · D1 (SQLite) · Hono · React 19 + Vite · Drizzle · Bun
+Bun · Hono · SQLite (`bun:sqlite`) · Drizzle · React 19 + Vite
 
 ## Quick start
 
 ```bash
 bun install
-cp .dev.vars.example .dev.vars   # then fill in local/private values
-bunx wrangler login              # one-time; auth Wrangler to your CF account
-bunx wrangler d1 create today    # paste the database_id into .dev.vars
-bun run wrangler:config          # writes gitignored wrangler.local.jsonc
-bun run db:migrate:local         # apply it to local D1
-bun run dev                      # vite dev, serves both API + SPA via Workers runtime
+cp .env.example .env   # then fill in the required values
+bun run db:migrate     # creates data/today.sqlite and applies drizzle/migrations
+bun run dev            # Hono API on :8788 (bun --watch) + Vite on :8787 proxying /api and /auth
 ```
 
-`wrangler.jsonc` is public-safe. Real deployment values live in `.env` / `.dev.vars` and are copied into `wrangler.local.jsonc` by `bun run wrangler:config`.
+Open http://localhost:8787.
 
-Required local/private values:
-
-```
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_D1_DATABASE_ID=
-GOOGLE_OAUTH_REDIRECT_URI=
-ALLOWED_EMAIL=
-GOOGLE_OAUTH_CLIENT_ID=
-GOOGLE_OAUTH_CLIENT_SECRET=
-GOOGLE_API_KEY=
-SESSION_SECRET=
-ANTHROPIC_API_KEY=
-```
-
-## Deploy
+## Production
 
 ```bash
-bun run wrangler:config
-bunx wrangler secret put GOOGLE_OAUTH_CLIENT_ID
-bunx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
-bunx wrangler secret put GOOGLE_API_KEY
-bunx wrangler secret put SESSION_SECRET
-bunx wrangler secret put ANTHROPIC_API_KEY
-bun run db:migrate:remote
-bun run deploy
+bun install --frozen-lockfile
+bun run build          # Vite → dist/client
+bun run start          # bun src/server/main.ts: migrates, then serves API + SPA
 ```
 
-Set `CLOUDFLARE_CUSTOM_DOMAIN` in `.env` / `.dev.vars` before `bun run wrangler:config` when deploying to a custom domain. Set `VITE_ALLOWED_HOSTS` to a comma-separated list of extra dev hosts when using tunnels or custom local domains.
+The server applies pending migrations from `MIGRATIONS_DIR` at startup, serves `/api/*` and `/auth/*`, serves files from `STATIC_DIR`, and falls back to `index.html` for client routes. It binds `HOST:PORT` (default `127.0.0.1:8788`) and expects a TLS reverse proxy in front; set `GOOGLE_OAUTH_REDIRECT_URI` to the public callback URL so OAuth and secure cookies use the public origin.
 
-`ALLOWED_EMAIL`, `GOOGLE_OAUTH_REDIRECT_URI`, timezone, transport mode and buffer minutes are plain Worker vars generated into `wrangler.local.jsonc`; API keys and secrets should be set with `wrangler secret put`.
+## Environment
+
+All configuration is environment variables, read once at startup by `src/server/config.ts`. `.env.example` lists every name.
+
+| Name | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `ALLOWED_EMAIL` | yes | | The single Google account allowed to sign in |
+| `GOOGLE_OAUTH_CLIENT_ID` | yes | | Google OAuth web client |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | yes (secret) | | Google OAuth web client |
+| `SESSION_SECRET` | yes (secret) | | Signs the session cookie |
+| `GOOGLE_OAUTH_REDIRECT_URI` | no | derived from the request | Public `/auth/google/callback` URL; set it behind a proxy |
+| `GOOGLE_API_KEY` | no (secret) | | Routes API key for travel estimates |
+| `HOME_ADDRESS` | no (private) | | Travel origin; without it travel rows are hidden |
+| `TIMEZONE` | no | `Europe/London` | Day boundaries for Today/Upcoming |
+| `TRANSPORT_DEFAULT` / `TRANSPORT_RESCUE` | no | `TRANSIT` / `DRIVE` | Routes travel modes |
+| `BUFFER_MINUTES` | no | `10` | Buffer added to prep time |
+| `HOST` / `PORT` | no | `127.0.0.1` / `8788` | Listen address |
+| `DATABASE_PATH` | no | `data/today.sqlite` | SQLite file (WAL mode) |
+| `MIGRATIONS_DIR` | no | `drizzle/migrations` | Drizzle SQL migrations |
+| `STATIC_DIR` | no | `dist/client` | Built SPA |
+| `VITE_ALLOWED_HOSTS` | no | | Extra Vite dev hosts (tunnels) |
+
+## Migrating from Cloudflare D1
+
+```bash
+bunx wrangler d1 export today --remote --output today-d1.sql
+DATABASE_PATH=/path/to/today.sqlite bun run db:migrate today-d1.sql
+```
+
+`db:migrate <file>` applies the migrations, loads the export into a scratch in-memory database, and copies the app tables (`sessions`, `oauth_tokens`, `candidates`, `body_state`, `prefs`) into the target. It refuses to import into tables that already have rows.
 
 ## Layout
 
 ```
 src/
   client/        React app (Vite entry: index.html → main.tsx → App.tsx)
-  server/        Worker (Hono) entry + db schema
+  server/        Hono app (index.ts), Bun entry (main.ts), config, db schema + migrator
 docs/            SPEC.md, SETUP.md
 drizzle/         generated migrations
 ```

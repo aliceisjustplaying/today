@@ -16,11 +16,11 @@ The current app includes:
 - Google Calendar read access for today and tomorrow.
 - Google Tasks read and completion access through the existing Google OAuth flow.
 - A Now panel centered on the next calendar anchor.
-- Body/prep state stored in D1 and used to calculate prep time.
+- Body/prep state stored in SQLite and used to calculate prep time.
 - Google Routes travel estimates from a configured home address to the next anchor location.
 - Today, Calendar, and Upcoming sections.
 - Local client cache for fast first paint, refreshed on focus and on a one-minute Now interval.
-- PWA manifest and static asset serving from the same Worker.
+- PWA manifest and static asset serving from the same server.
 
 Not shipped yet:
 
@@ -40,7 +40,7 @@ Not shipped yet:
 | Hard time commitments                | Google Calendar                                     |
 | Travel time                          | Google Routes API                                   |
 | "What am I doing now / what's next?" | This app                                            |
-| Body/prep state                      | This app, in D1                                     |
+| Body/prep state                      | This app, in SQLite                                 |
 | Money context                        | Future YNAB integration                             |
 | Candidate tasks/replies              | Future candidate pipeline; schema exists but unused |
 
@@ -91,7 +91,7 @@ The Returns section lists incomplete tasks from the Google Tasks list named `Ret
 
 ## Runtime Behavior
 
-The Worker serves both API routes and the React SPA.
+One Bun process (Hono) serves both API routes and the React SPA, backed by a local SQLite file. Pending migrations are applied at startup.
 
 API routes:
 
@@ -117,37 +117,36 @@ All `/api/*` routes except `/api/ping` require a session. Unknown `/api/*` route
 
 ## Configuration
 
-Tracked `wrangler.jsonc` contains public-safe defaults. Private deployment config is read from `.env` / `.dev.vars` and generated into ignored `wrangler.local.jsonc`.
+Configuration is environment variables, read once at startup (`src/server/config.ts`). `.env.example` and the README list every name with its default.
 
-Required private values:
+Required:
 
 ```txt
-CLOUDFLARE_ACCOUNT_ID
-CLOUDFLARE_D1_DATABASE_ID
-GOOGLE_OAUTH_REDIRECT_URI
 ALLOWED_EMAIL
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
-GOOGLE_API_KEY
 SESSION_SECRET
-ANTHROPIC_API_KEY
 ```
 
-Optional private values:
+Optional:
 
 ```txt
-CLOUDFLARE_WORKER_NAME
-CLOUDFLARE_D1_DATABASE_NAME
-CLOUDFLARE_CUSTOM_DOMAIN
-VITE_ALLOWED_HOSTS
+GOOGLE_OAUTH_REDIRECT_URI
+GOOGLE_API_KEY
 HOME_ADDRESS
 TIMEZONE
 TRANSPORT_DEFAULT
 TRANSPORT_RESCUE
 BUFFER_MINUTES
+HOST
+PORT
+DATABASE_PATH
+MIGRATIONS_DIR
+STATIC_DIR
+VITE_ALLOWED_HOSTS
 ```
 
-`HOME_ADDRESS` is required for travel estimates. Without it, events still render, but travel rows do not.
+`HOME_ADDRESS` and `GOOGLE_API_KEY` are required for travel estimates. Without them, events still render, but travel rows do not.
 
 ## Domain Model
 
@@ -199,7 +198,7 @@ type PrepStep = {
 }
 ```
 
-D1 tables:
+SQLite tables:
 
 - `sessions`
 - `oauth_tokens`

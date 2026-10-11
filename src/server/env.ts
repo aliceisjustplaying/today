@@ -1,3 +1,6 @@
+import type { Config } from "./config";
+import type { DB } from "./db";
+
 export type SessionRow = {
   id: string;
   userSub: string;
@@ -6,8 +9,10 @@ export type SessionRow = {
   expiresAt: Date;
 };
 
+export type AppEnv = Config & { db: DB };
+
 export type Env = {
-  Bindings: Cloudflare.Env;
+  Bindings: AppEnv;
   Variables: {
     session?: SessionRow;
   };
