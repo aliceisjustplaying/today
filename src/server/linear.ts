@@ -16,6 +16,7 @@ export type Task = {
   description: string;
   due: { date: string } | null;
   context: string;
+  team: { key: string; name: string };
   url: string;
 };
 
@@ -26,7 +27,7 @@ type IssueNode = {
   description: string | null;
   dueDate: string | null;
   url: string;
-  team: { key: string };
+  team: { key: string; name: string };
   project: { name: string } | null;
 };
 
@@ -38,7 +39,7 @@ type IssueConnection = {
 const ISSUE_FIELDS = `
   nodes {
     id identifier title description dueDate url
-    team { key }
+    team { key name }
     project { name }
   }
   pageInfo { hasNextPage endCursor }
@@ -74,6 +75,7 @@ function toTask(issue: IssueNode, workspace: number): Task {
     description: issue.description ?? "",
     due: issue.dueDate ? { date: issue.dueDate } : null,
     context: issue.project?.name ?? issue.team.key,
+    team: issue.team,
     url: issue.url,
   };
 }
@@ -175,6 +177,7 @@ export type TaskBuckets = {
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
+  undated: Task[];
 };
 
 export function bucketTasks(
@@ -185,10 +188,14 @@ export function bucketTasks(
   const overdue: Task[] = [];
   const today: Task[] = [];
   const upcoming: Task[] = [];
+  const undated: Task[] = [];
 
   for (const task of tasks) {
     const dateKey = dueDateKey(task);
-    if (!dateKey) continue;
+    if (!dateKey) {
+      undated.push(task);
+      continue;
+    }
     if (dateKey < todayKey) overdue.push(task);
     else if (dateKey === todayKey) today.push(task);
     else if (dateKey <= sevenDayKey) upcoming.push(task);
@@ -197,6 +204,7 @@ export function bucketTasks(
   const byTitle = (a: Task, b: Task) => a.content.localeCompare(b.content);
   overdue.sort(byTitle);
   today.sort(byTitle);
+  undated.sort(byTitle);
   upcoming.sort((a, b) => {
     const aKey = dueDateKey(a)!;
     const bKey = dueDateKey(b)!;
@@ -204,5 +212,46 @@ export function bucketTasks(
     return byTitle(a, b);
   });
 
-  return { overdue, today, upcoming };
+  return { overdue, today, upcoming, undated };
+}
+
+export type TabConfig = { name: string; teams: string[] };
+
+export type TaskTab = TaskBuckets & { name: string };
+
+export function parseTabs(raw: string | undefined): TabConfig[] {
+  return (raw ?? "")
+    .split(";")
+    .map((entry) => entry.split("="))
+    .filter(([name, teams]) => name?.trim() && teams?.trim())
+    .map(([name, teams]) => ({
+      name: name!.trim(),
+      teams: teams!.split(",").map((key) => key.trim().toUpperCase()).filter(Boolean),
+    }));
+}
+
+export function tabTasks(
+  tasks: Task[],
+  tabs: TabConfig[],
+  todayKey: string,
+  sevenDayKey: string,
+): TaskTab[] {
+  const configured = tabs.map((tab) => ({ name: tab.name, teams: new Set(tab.teams), tasks: [] as Task[] }));
+  const byTeam = new Map<string, { name: string; tasks: Task[] }>();
+
+  for (const task of tasks) {
+    const tab = configured.find((t) => t.teams.has(task.team.key.toUpperCase()));
+    if (tab) {
+      tab.tasks.push(task);
+      continue;
+    }
+    const own = byTeam.get(task.team.key) ?? { name: task.team.name, tasks: [] };
+    own.tasks.push(task);
+    byTeam.set(task.team.key, own);
+  }
+
+  const teamTabs = [...byTeam.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+  );
+  return [...configured, ...teamTabs].map((tab) => ({ name: tab.name, ...bucketTasks(tab.tasks, todayKey, sevenDayKey) }));
 }

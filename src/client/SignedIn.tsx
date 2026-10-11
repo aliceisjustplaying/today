@@ -10,15 +10,14 @@ import type {
 } from "./types";
 import { Now } from "./Now";
 import { Returns } from "./Returns";
-import { Today } from "./Today";
 import { Events } from "./Events";
-import { Upcoming } from "./Upcoming";
+import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
 
 export function SignedIn({ me }: { me: Me }) {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now"));
   const [tasks, setTasks] = useState<TasksResponse | null>(() =>
-    getCached<TasksResponse>("tasks.linear"),
+    getCached<TasksResponse>("tasks.linear.v2"),
   );
   const [events, setEvents] = useState<EventsResponse | null>(() =>
     getCached<EventsResponse>("events"),
@@ -56,7 +55,7 @@ export function SignedIn({ me }: { me: Me }) {
       if (!r.ok) throw new Error(`tasks ${r.status}`);
       const data = (await r.json()) as TasksResponse;
       setTasks(data);
-      setCached("tasks.linear", data);
+      setCached("tasks.linear.v2", data);
     } catch (e) {
       setError(String(e));
     }
@@ -181,8 +180,7 @@ export function SignedIn({ me }: { me: Me }) {
 
       <Now state={now} onBodyStateChange={onBodyStateChange} />
       <Events events={events} />
-      <Today tasks={tasks} completing={completing} onComplete={onCompleteTask} />
-      <Upcoming tasks={tasks} completing={completing} onComplete={onCompleteTask} />
+      <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Returns returns={returns} />
 
       {error && <div className="error-toast">{error}</div>}

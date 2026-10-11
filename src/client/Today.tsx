@@ -1,14 +1,13 @@
-import type { Task, TasksResponse } from "./types";
+import type { Task, TaskBuckets } from "./types";
 import { OpenIcon } from "./icons";
 
 type Props = {
-  tasks: TasksResponse | null;
+  tasks: TaskBuckets;
   completing: Set<string>;
   onComplete: (task: Task) => void;
 };
 
 export function Today({ tasks, completing, onComplete }: Props) {
-  if (!tasks) return null;
   const { overdue, today } = tasks;
   if (overdue.length === 0 && today.length === 0) return null;
 
@@ -53,7 +52,7 @@ export function Today({ tasks, completing, onComplete }: Props) {
   );
 }
 
-function TaskItem({
+export function TaskItem({
   task,
   completing,
   onComplete,

@@ -11,7 +11,7 @@ import {
 } from "./google";
 import { computeNowState, updateBodyState } from "./now";
 import { getReturns } from "./returns";
-import { bucketTasks, completeIssue, LinearError, listAssignedIssues } from "./linear";
+import { completeIssue, LinearError, listAssignedIssues, tabTasks } from "./linear";
 import type { Env } from "./env";
 
 const app = new Hono<Env>();
@@ -32,8 +32,8 @@ app.get("/api/tasks", requireSession, async (c) => {
     const tasks = await listAssignedIssues(c.env.LINEAR_API_KEYS);
     const today = todayKeyInTz(c.env.TIMEZONE);
     const sevenDay = addDaysToKey(today, 7);
-    const buckets = bucketTasks(tasks, today, sevenDay);
-    return c.json({ ...buckets, todayKey: today });
+    const tabs = tabTasks(tasks, c.env.LINEAR_TABS, today, sevenDay);
+    return c.json({ tabs, todayKey: today });
   } catch (e) {
     if (e instanceof LinearError) return c.json({ error: e.message }, 502);
     throw e;
