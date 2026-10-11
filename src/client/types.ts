@@ -109,3 +109,43 @@ export type BodyStateUpdate = Partial<{
   packed: boolean;
   runningLate: boolean;
 }>;
+
+export type LimitsWindow = {
+  window: string;
+  usedPercent: number | null;
+  resetsAt: number | null;
+  projection: {
+    percentPerHour: number;
+    projectedAtReset: number | null;
+    hitsLimitAt: number | null;
+    samples: number;
+  } | null;
+};
+
+export type LimitsBurn = { perDay: number; daysLeft: number | null };
+export type LimitsSpendProjection = { perDay: number; projectedAtEnd: number };
+
+export type LimitsAccount = {
+  id: string;
+  provider: string;
+  label: string;
+  status: "ok" | "error" | "pending";
+  error: string | null;
+  lastAttemptAt: number | null;
+  observedAt: number | null;
+  windows: LimitsWindow[];
+  credits?: { balance: number | null; unlimited: boolean; burn: LimitsBurn | null } | null;
+  balanceUsd?: { balance: number; burn: LimitsBurn | null } | null;
+  spendUsd?: {
+    credits: number;
+    total: number;
+    periodEnd: number | null;
+    projection: { credits: LimitsSpendProjection | null; total: LimitsSpendProjection | null };
+  } | null;
+};
+
+export type LimitsSummary = {
+  generatedAt: number;
+  accounts: LimitsAccount[];
+  errors?: { providers: string[]; message: string }[];
+};
