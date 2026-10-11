@@ -1,4 +1,5 @@
 import type { PrepToday, PrepUpdate } from "./types";
+import { usePrivacy } from "./privacy";
 
 type Props = {
   prep: PrepToday;
@@ -7,6 +8,7 @@ type Props = {
 };
 
 export function BodyPills({ prep, onChange, onEdit }: Props) {
+  const p = usePrivacy();
   return (
     <div className="body-pills">
       {prep.steps.map((step) => (
@@ -17,7 +19,7 @@ export function BodyPills({ prep, onChange, onEdit }: Props) {
           onClick={() => onChange({ stepId: step.id, done: !step.done })}
           aria-pressed={step.done}
         >
-          <span className="pill-label">{step.label}</span>
+          <span className="pill-label">{p.hide(step.label)}</span>
           <span className="pill-mins">{step.minutes}m</span>
         </button>
       ))}

@@ -38,5 +38,5 @@ export function App() {
       </div>
     );
   }
-  return <SignedIn me={auth.me} />;
+  return <SignedIn />;
 }

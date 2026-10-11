@@ -1,6 +1,7 @@
 import type { Task, TaskBuckets } from "./types";
 import { formatDateShort } from "./format";
 import { OpenIcon } from "./icons";
+import { usePrivacy } from "./privacy";
 
 type Props = {
   tasks: TaskBuckets;
@@ -21,6 +22,7 @@ function groupByDate(tasks: Task[]): Map<string, Task[]> {
 }
 
 export function Upcoming({ tasks, completing, onComplete }: Props) {
+  const p = usePrivacy();
   if (tasks.upcoming.length === 0) return null;
   const grouped = groupByDate(tasks.upcoming);
 
@@ -45,9 +47,9 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
                   disabled={completing.has(t.id)}
                 />
                 <div className="task-body">
-                  <div className="task-content">{t.content}</div>
+                  <div className="task-content">{p.hide(t.content)}</div>
                   <div className="task-labels">
-                    <span className="label-chip">{t.context}</span>
+                    <span className="label-chip">{p.hide(t.context)}</span>
                   </div>
                 </div>
                 <a

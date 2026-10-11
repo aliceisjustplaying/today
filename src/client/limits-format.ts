@@ -131,8 +131,8 @@ export type BalanceRow = {
 export function balanceRow(a: LimitsAccount): BalanceRow {
   const b = a.balanceUsd?.burn;
   const days = b?.daysLeft;
-  const tone =
-    a.balanceUsd && a.balanceUsd.balance <= 0 ? "out" : days == null ? undefined : days <= 2 ? "out" : days <= 7 ? "low" : undefined;
+  // Only a burn rate earns a color (Capy's days left); a zero or negative balance is just a number.
+  const tone = days == null ? undefined : days <= 2 ? "out" : days <= 7 ? "low" : undefined;
   if (a.spendUsd) {
     const p = a.spendUsd.projection.credits;
     const monthEnd = p ? `~${money(p.projectedAtEnd)} by month end` : null;
@@ -160,7 +160,6 @@ export function balanceRow(a: LimitsAccount): BalanceRow {
   return {
     amount: money(a.balanceUsd?.balance ?? 0),
     detail: b ? `${money(b.perDay)}/day` + (b.daysLeft != null ? ` · ~${Math.round(b.daysLeft)} days left` : "") : null,
-    tone,
   };
 }
 

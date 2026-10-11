@@ -4,6 +4,7 @@ import { getCached, setCached } from "./cache";
 import { ProviderLogo } from "./logos";
 import { onResume, signInAgain } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
+import { usePrivacy } from "./privacy";
 import {
   ageLabel,
   balanceRow,
@@ -22,6 +23,7 @@ import {
 } from "./limits-format";
 
 export function Limits() {
+  const p = usePrivacy();
   const [summary, setSummary] = useState<LimitsSummary | null>(() => getCached<LimitsSummary>("limits"));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,7 @@ export function Limits() {
     return (
       <section className="section limits-down" role="alert">
         <h2 className="section-title">Limits unavailable</h2>
-        <p className="limits-down-text">{error ?? "No data from the limits service."}</p>
+        <p className="limits-down-text">{error ? p.text(error) : "No data from the limits service."}</p>
         <button type="button" className="limits-retry" onClick={load}>
           Try again
         </button>
@@ -80,12 +82,12 @@ export function Limits() {
     <div className="limits">
       {error && (
         <p className="limits-stale" role="status">
-          Showing data from {new Date(summary.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}. {error}
+          Showing data from {new Date(summary.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}. {p.text(error)}
         </p>
       )}
       {summary.errors?.map((e) => (
         <p key={e.providers.join(",")} className="limits-stale">
-          {e.providers.join(", ")}: {e.message}
+          {e.providers.join(", ")}: {p.text(e.message)}
         </p>
       ))}
       {summary.accounts.length === 0 && <p className="tabs-empty">No accounts configured in limits.</p>}
@@ -98,23 +100,28 @@ export function Limits() {
 }
 
 function AccountCard({ account: a, now }: { account: LimitsAccount; now: number }) {
+  const p = usePrivacy();
   const spend = spendLines(a);
   return (
     <section className="section limits-card" data-provider={a.provider} data-status={a.status}>
       <div className="limits-head">
         <ProviderLogo provider={a.provider} />
-        <AccountTitle account={a} heading />
-        {a.status === "ok" || a.status === "pending" ? (
-          <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
-        ) : (
-          <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
-        )}
+        <div className="limits-nameline">
+          <h2 className="limits-name">{a.label}</h2>
+          <PlanChip account={a} />
+          {a.status === "ok" || a.status === "pending" ? (
+            <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
+          ) : (
+            <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
+          )}
+        </div>
         <span className="limits-age num" title="last updated">
           {ageLabel(a, now)}
         </span>
+        {a.email && <AccountEmail email={a.email} />}
       </div>
-      {a.status === "error" && a.error && <p className="limits-error">{a.error}</p>}
-      {cardNotice(a) && <p className="limits-notice">{cardNotice(a)}</p>}
+      {a.status === "error" && a.error && <p className="limits-error">{p.text(a.error)}</p>}
+      {cardNotice(a) && <p className="limits-notice">{p.text(cardNotice(a)!)}</p>}
       {a.windows.length > 0 && (
         <ul className="limits-windows">
           {a.windows.map((w) => (
@@ -122,26 +129,24 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
           ))}
         </ul>
       )}
-      {spend.length > 0 && <p className="limits-spend">{spend.join(" · ")}</p>}
+      {spend.length > 0 && <p className="limits-spend">{p.text(spend.join(" · "))}</p>}
     </section>
   );
 }
 
-/** The account's name with its email underneath, both cut with an ellipsis rather than wrapping. */
-function AccountTitle({ account: a, heading }: { account: LimitsAccount; heading?: boolean }) {
-  const chip = planChip(a);
+function PlanChip({ account }: { account: LimitsAccount }) {
+  const p = usePrivacy();
+  const chip = planChip(account);
+  return chip ? <span className="limits-plan">{p.text(chip)}</span> : null;
+}
+
+/** The account's email on its own line under the name, cut with an ellipsis rather than wrapping. */
+function AccountEmail({ email }: { email: string }) {
+  const p = usePrivacy();
   return (
-    <div className="limits-title">
-      <div className="limits-name-row">
-        {heading ? <h2 className="limits-name">{a.label}</h2> : <span className="limits-balance-name">{a.label}</span>}
-        {chip && <span className="limits-plan">{chip}</span>}
-      </div>
-      {a.email && (
-        <span className="limits-email" title={a.email}>
-          {a.email}
-        </span>
-      )}
-    </div>
+    <span className="limits-email" title={p.on ? undefined : email}>
+      {p.text(email)}
+    </span>
   );
 }
 
@@ -221,6 +226,7 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
 }
 
 function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChanged: () => Promise<void> }) {
+  const p = usePrivacy();
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   return (
@@ -232,7 +238,10 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
           return (
             <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status} data-tone={tone}>
               <ProviderLogo provider={a.provider} />
-              <AccountTitle account={a} />
+              <span className="limits-name-row">
+                <span className="limits-balance-name">{a.label}</span>
+                <PlanChip account={a} />
+              </span>
               {editing === a.id ? (
                 <BalanceEdit
                   account={a}
@@ -245,32 +254,33 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
                 <button
                   type="button"
                   className={amount ? "limits-balance-amount limits-balance-edit num" : "limits-balance-set"}
-                  title={amount ? `${title ? `${title} · ` : ""}tap to update the balance` : "Enter the credits left on Settings → Billing"}
+                  title={amount ? p.text(`${title ? `${title} · ` : ""}tap to update the balance`) : "Enter the credits left on Settings → Billing"}
                   onClick={() => setEditing(a.id)}
                 >
-                  {amount ?? "set balance"}
+                  {amount ? p.text(amount) : "set balance"}
                 </button>
               ) : sources?.length ? (
                 <button
                   type="button"
                   className="limits-balance-amount limits-balance-edit num"
-                  title={title}
+                  title={title && p.text(title)}
                   aria-expanded={expanded === a.id}
                   onClick={() => setExpanded(expanded === a.id ? null : a.id)}
                 >
-                  {amount}
+                  {amount && p.text(amount)}
                 </button>
               ) : (
-                <span className="limits-balance-amount num" title={title}>
-                  {amount}
+                <span className="limits-balance-amount num" title={title && p.text(title)}>
+                  {amount && p.text(amount)}
                 </span>
               )}
-              {detail && <span className="limits-balance-detail num">{detail}</span>}
+              {a.email && <AccountEmail email={a.email} />}
+              {detail && <span className="limits-balance-detail num">{p.text(detail)}</span>}
               {expanded === a.id && sources && (
                 <ul className="limits-balance-sources">
-                  {title && <li>{title}</li>}
+                  {title && <li>{p.text(title)}</li>}
                   {sources.map((s, i) => (
-                    <li key={i}>{s}</li>
+                    <li key={i}>{p.text(s)}</li>
                   ))}
                 </ul>
               )}

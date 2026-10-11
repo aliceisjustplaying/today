@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PrepHistory, PrepStep, PrepStepDraft } from "./types";
 import { formatTime } from "./format";
+import { usePrivacy } from "./privacy";
 
 type Props = {
   view: "edit" | "history";
@@ -146,6 +147,7 @@ function clock(minute: number) {
 }
 
 function History() {
+  const p = usePrivacy();
   const [history, setHistory] = useState<PrepHistory | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,7 +168,7 @@ function History() {
         <tbody>
           {history.steps.map((s) => (
             <tr key={s.id} className={s.removed ? "prep-avg--removed" : ""}>
-              <th scope="row">{s.label}</th>
+              <th scope="row">{p.hide(s.label)}</th>
               <td className="prep-avg-time">{s.avgDoneMinute == null ? "—" : `~${clock(s.avgDoneMinute)}`}</td>
               <td className="prep-avg-days">
                 {s.doneDays}/{history.days.length} days
@@ -183,7 +185,7 @@ function History() {
               <th />
               {columns.map((c) => (
                 <th key={c.key} scope="col" className={c.removed ? "prep-grid-col--removed" : ""}>
-                  <span>{c.label}</span>
+                  <span>{c.key === "late" ? c.label : p.hide(c.label)}</span>
                 </th>
               ))}
             </tr>

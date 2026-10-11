@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CalendarEvent, EventsResponse } from "./types";
 import { fantasticalOpen } from "./urls";
 import { CalendarIcon } from "./icons";
+import { usePrivacy } from "./privacy";
 
 function eventStartIso(e: CalendarEvent): string {
   if (e.start && "dateTime" in e.start) return e.start.dateTime;
@@ -36,11 +37,12 @@ function tomorrowKey(): string {
 }
 
 function EventRow({ e }: { e: CalendarEvent }) {
+  const p = usePrivacy();
   return (
     <li className="event">
       <span className="event-time">{eventStartTime(e)}</span>
-      <span className="event-title">{e.summary ?? "(no title)"}</span>
-      {e.location && <span className="event-loc">{e.location}</span>}
+      <span className="event-title">{p.hide(e.summary ?? "(no title)")}</span>
+      {e.location && <span className="event-loc">{p.hide(e.location)}</span>}
     </li>
   );
 }

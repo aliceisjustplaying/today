@@ -240,6 +240,10 @@ describe("tabs", () => {
       { name: "Work", teams: ["DEV", "OPS"] },
     ]);
     expect(parseTabs(undefined)).toEqual([]);
+    expect(parseTabs("To do=BEL;Dev=DEV")).toEqual([
+      { name: "To do", teams: ["BEL"] },
+      { name: "Dev", teams: ["DEV"] },
+    ]);
   });
 
   const tasks = [
