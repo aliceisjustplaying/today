@@ -1,12 +1,11 @@
 import type { Task, TasksResponse } from "./types";
 import { formatDateShort } from "./format";
-import { googleTasksUrl } from "./urls";
 import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (taskListId: string, id: string) => void;
+  onComplete: (id: string) => void;
 };
 
 function groupByDate(tasks: Task[]): Map<string, Task[]> {
@@ -34,27 +33,27 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {items.map((t) => (
               <li
-                key={`${t.taskListId}:${t.id}`}
-                className={`task ${completing.has(`${t.taskListId}:${t.id}`) ? "task--completing" : ""}`}
+                key={t.id}
+                className={`task ${completing.has(t.id) ? "task--completing" : ""}`}
               >
                 <button
                   type="button"
                   className="task-check"
-                  data-completing={completing.has(`${t.taskListId}:${t.id}`) ? "true" : undefined}
-                  onClick={() => onComplete(t.taskListId, t.id)}
+                  data-completing={completing.has(t.id) ? "true" : undefined}
+                  onClick={() => onComplete(t.id)}
                   aria-label={`mark "${t.content}" as done`}
-                  disabled={completing.has(`${t.taskListId}:${t.id}`)}
+                  disabled={completing.has(t.id)}
                 />
                 <div className="task-body">
                   <div className="task-content">{t.content}</div>
                   <div className="task-labels">
-                    <span className="label-chip">{t.taskListTitle}</span>
+                    <span className="label-chip">{t.context}</span>
                   </div>
                 </div>
                 <a
                   className="row-open"
-                  href={t.webViewLink ?? googleTasksUrl}
-                  aria-label="open in Google Tasks"
+                  href={t.url}
+                  aria-label={`open ${t.identifier} in Linear`}
                 >
                   <OpenIcon />
                 </a>

@@ -23,6 +23,7 @@ beforeAll(() => {
     GOOGLE_OAUTH_CLIENT_ID: "client-id",
     GOOGLE_OAUTH_CLIENT_SECRET: "client-secret",
     SESSION_SECRET: "session-secret",
+    LINEAR_API_KEY: "lin_api_test",
     STATIC_DIR: staticDir,
   });
   const db = openDb(":memory:");
@@ -47,7 +48,7 @@ async function sessionCookie() {
 describe("config", () => {
   test("fails fast on missing required env", () => {
     expect(() => loadConfig({ ALLOWED_EMAIL: "me@example.com" })).toThrow(
-      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET",
+      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET, LINEAR_API_KEY",
     );
   });
 
@@ -55,6 +56,7 @@ describe("config", () => {
     expect(env.TIMEZONE).toBe("Europe/London");
     expect(env.BUFFER_MINUTES).toBe("10");
     expect(env.PORT).toBe(8788);
+    expect(env.LINEAR_RETURNS_LABEL).toBe("Returns");
   });
 });
 

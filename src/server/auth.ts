@@ -21,7 +21,6 @@ auth.use("/google/callback", async (c, next) => {
       "email",
       "profile",
       "https://www.googleapis.com/auth/calendar.readonly",
-      "https://www.googleapis.com/auth/tasks",
     ],
     access_type: "offline",
     prompt: "consent",
@@ -59,7 +58,7 @@ auth.get("/google/callback", async (c) => {
     userSub: user.id,
     accessToken: token.token,
     refreshToken: refreshToken?.token ?? null,
-    scope: "openid email profile calendar.readonly tasks",
+    scope: "openid email profile calendar.readonly",
     expiresAt,
     updatedAt: now,
   });

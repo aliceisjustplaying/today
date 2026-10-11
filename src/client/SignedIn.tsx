@@ -17,13 +17,13 @@ import { clearCached, getCached, setCached } from "./cache";
 export function SignedIn({ me }: { me: Me }) {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now"));
   const [tasks, setTasks] = useState<TasksResponse | null>(() =>
-    getCached<TasksResponse>("tasks.google-tasks"),
+    getCached<TasksResponse>("tasks.linear"),
   );
   const [events, setEvents] = useState<EventsResponse | null>(() =>
     getCached<EventsResponse>("events"),
   );
   const [returns, setReturns] = useState<ReturnsResponse | null>(() =>
-    getCached<ReturnsResponse>("returns.google-tasks"),
+    getCached<ReturnsResponse>("returns.linear"),
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function SignedIn({ me }: { me: Me }) {
       if (!r.ok) throw new Error(`tasks ${r.status}`);
       const data = (await r.json()) as TasksResponse;
       setTasks(data);
-      setCached("tasks.google-tasks", data);
+      setCached("tasks.linear", data);
     } catch (e) {
       setError(String(e));
     }
@@ -84,7 +84,7 @@ export function SignedIn({ me }: { me: Me }) {
       if (!r.ok) throw new Error(`returns ${r.status}`);
       const data = (await r.json()) as ReturnsResponse;
       setReturns(data);
-      setCached("returns.google-tasks", data);
+      setCached("returns.linear", data);
     } catch (e) {
       setError(String(e));
     }
@@ -126,18 +126,16 @@ export function SignedIn({ me }: { me: Me }) {
   );
 
   const onCompleteTask = useCallback(
-    async (taskListId: string, id: string) => {
-      const completingKey = `${taskListId}:${id}`;
+    async (id: string) => {
       setCompleting((prev) => {
         const next = new Set(prev);
-        next.add(completingKey);
+        next.add(id);
         return next;
       });
       try {
-        const r = await fetch(
-          `/api/tasks/${encodeURIComponent(taskListId)}/${encodeURIComponent(id)}/close`,
-          { method: "POST" },
-        );
+        const r = await fetch(`/api/tasks/${encodeURIComponent(id)}/close`, {
+          method: "POST",
+        });
         if (r.status === 401) {
           window.location.href = "/auth/google/start";
           return;
@@ -149,7 +147,7 @@ export function SignedIn({ me }: { me: Me }) {
       } finally {
         setCompleting((prev) => {
           const next = new Set(prev);
-          next.delete(completingKey);
+          next.delete(id);
           return next;
         });
       }

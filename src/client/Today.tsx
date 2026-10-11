@@ -1,11 +1,10 @@
 import type { Task, TasksResponse } from "./types";
-import { googleTasksUrl } from "./urls";
 import { OpenIcon } from "./icons";
 
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (taskListId: string, id: string) => void;
+  onComplete: (id: string) => void;
 };
 
 export function Today({ tasks, completing, onComplete }: Props) {
@@ -24,9 +23,9 @@ export function Today({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {overdue.map((t) => (
               <TaskItem
-                key={`${t.taskListId}:${t.id}`}
+                key={t.id}
                 task={t}
-                completing={completing.has(`${t.taskListId}:${t.id}`)}
+                completing={completing.has(t.id)}
                 onComplete={onComplete}
               />
             ))}
@@ -41,9 +40,9 @@ export function Today({ tasks, completing, onComplete }: Props) {
           <ul className="task-list">
             {today.map((t) => (
               <TaskItem
-                key={`${t.taskListId}:${t.id}`}
+                key={t.id}
                 task={t}
-                completing={completing.has(`${t.taskListId}:${t.id}`)}
+                completing={completing.has(t.id)}
                 onComplete={onComplete}
               />
             ))}
@@ -61,7 +60,7 @@ function TaskItem({
 }: {
   task: Task;
   completing: boolean;
-  onComplete: (taskListId: string, id: string) => void;
+  onComplete: (id: string) => void;
 }) {
   return (
     <li className={`task ${completing ? "task--completing" : ""}`}>
@@ -69,20 +68,20 @@ function TaskItem({
         type="button"
         className="task-check"
         data-completing={completing ? "true" : undefined}
-        onClick={() => onComplete(task.taskListId, task.id)}
+        onClick={() => onComplete(task.id)}
         aria-label={`mark "${task.content}" as done`}
         disabled={completing}
       />
       <div className="task-body">
         <div className="task-content">{task.content}</div>
         <div className="task-labels">
-          <span className="label-chip">{task.taskListTitle}</span>
+          <span className="label-chip">{task.context}</span>
         </div>
       </div>
       <a
         className="row-open"
-        href={task.webViewLink ?? googleTasksUrl}
-        aria-label="open in Google Tasks"
+        href={task.url}
+        aria-label={`open ${task.identifier} in Linear`}
       >
         <OpenIcon />
       </a>

@@ -8,7 +8,8 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - Config: environment variables parsed once by `src/server/config.ts` and passed to Hono as `c.env` together with the Drizzle handle (`c.env.db`). Add new settings there, not as ad-hoc `process.env` reads.
 - DB: **SQLite** via `bun:sqlite` + Drizzle (`src/server/db/index.ts`); schema in `src/server/db/schema.ts`, migrations in `drizzle/migrations` applied at startup.
 - Frontend: **React 19 + Vite**, built to `dist/client` and served by the same Hono app (`serveStatic`, SPA fallback to `index.html`).
-- Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Google Tasks and Google Calendar use the same stored OAuth grant.
+- Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Google Calendar uses the stored OAuth grant.
+- Tasks: **Linear** via GraphQL with a personal API key (`LINEAR_API_KEY`, `src/server/linear.ts`). Today/Upcoming are `viewer.assignedIssues` (open states, by `dueDate`); Returns are issues with the `LINEAR_RETURNS_LABEL` label regardless of assignee; completing is `issueUpdate` to the team's completed state.
 - Travel time: **Google Routes API** (`computeRouteMatrix`). The legacy Distance Matrix API is deprecated — do not use it.
 - Package manager: Bun. Run scripts with `bun run …`, install with `bun install`, never npm/yarn/pnpm. CLIs via `bunx`.
 
@@ -17,14 +18,14 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - **Do not** reach for `process.env` outside `config.ts`/`main.ts`, or open extra SQLite connections; route handlers get both via `c.env`.
 - **Do not** introduce manual / fixture / hardcoded data paths as a v0 shortcut. Every data source is a real integration. (See `MEMORY.md → feedback-no-manual-data`.)
 - **Do not** moralize about money in UI copy or AI outputs (e.g. Uber spend). Encode preferences neutrally in `prefs`.
-- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Google Tasks. Those are app-local state on the `body_state` and `prep_steps` tables.
+- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Linear. Those are app-local state on the `body_state` and `prep_steps` tables.
 
 ## Conventions
 
 - All API routes live under `/api/*` and are defined in `src/server/`. Unknown `/api/*` is a JSON 404; everything else is a static file or `index.html` so the SPA handles client routes.
 - Secrets and private config locally: `.env` (see `.env.example`). In prod: sops secrets loaded through systemd `LoadCredential` by the nixfiles module; plain values in the unit's `Environment=`.
 - All AI calls go through the Anthropic SDK (`@anthropic-ai/sdk`) with prompt caching on the system prompt — see [memory project_today_stack and feature implementations].
-- Candidates are inserted with `status = "candidate"`. They become real tasks only when explicitly approved → Google Tasks write.
+- Candidates are inserted with `status = "candidate"`. They become real tasks only when explicitly approved → Linear `issueCreate`.
 - Audit: every state-changing action should be loggable. v0 just `console.log`s; structured audit table comes later.
 
 ## Useful scripts

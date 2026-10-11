@@ -1,6 +1,6 @@
 # today
 
-The Now layer above Google Tasks + Google Calendar + YNAB. See `docs/SPEC.md` for the product, `docs/SETUP.md` for the credential checklist.
+The Now layer above Linear + Google Calendar + YNAB. See `docs/SPEC.md` for the product, `docs/SETUP.md` for the credential checklist.
 
 ## Stack
 
@@ -37,6 +37,8 @@ All configuration is environment variables, read once at startup by `src/server/
 | `GOOGLE_OAUTH_CLIENT_ID` | yes | | Google OAuth web client |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | yes (secret) | | Google OAuth web client |
 | `SESSION_SECRET` | yes (secret) | | Signs the session cookie |
+| `LINEAR_API_KEY` | yes (secret) | | Personal Linear API key (tasks, completion, Returns) |
+| `LINEAR_RETURNS_LABEL` | no | `Returns` | Linear label whose open issues fill the Returns section |
 | `GOOGLE_OAUTH_REDIRECT_URI` | no | derived from the request | Public `/auth/google/callback` URL; set it behind a proxy |
 | `GOOGLE_API_KEY` | no (secret) | | Routes API key for travel estimates |
 | `HOME_ADDRESS` | no (private) | | Travel origin; without it travel rows are hidden |

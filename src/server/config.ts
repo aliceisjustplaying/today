@@ -3,6 +3,7 @@ const REQUIRED = [
   "GOOGLE_OAUTH_CLIENT_ID",
   "GOOGLE_OAUTH_CLIENT_SECRET",
   "SESSION_SECRET",
+  "LINEAR_API_KEY",
 ] as const;
 
 export type Config = {
@@ -13,6 +14,8 @@ export type Config = {
   GOOGLE_API_KEY: string;
   HOME_ADDRESS: string;
   SESSION_SECRET: string;
+  LINEAR_API_KEY: string;
+  LINEAR_RETURNS_LABEL: string;
   TIMEZONE: string;
   TRANSPORT_DEFAULT: string;
   TRANSPORT_RESCUE: string;
@@ -42,6 +45,8 @@ export function loadConfig(env: EnvSource = process.env): Config {
     GOOGLE_API_KEY: value("GOOGLE_API_KEY") ?? "",
     HOME_ADDRESS: value("HOME_ADDRESS") ?? "",
     SESSION_SECRET: value("SESSION_SECRET")!,
+    LINEAR_API_KEY: value("LINEAR_API_KEY")!,
+    LINEAR_RETURNS_LABEL: value("LINEAR_RETURNS_LABEL") ?? "Returns",
     TIMEZONE: value("TIMEZONE") ?? "Europe/London",
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",
