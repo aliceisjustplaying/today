@@ -1,5 +1,6 @@
 import type { Task, TaskBuckets } from "./types";
 import { OpenIcon } from "./icons";
+import { usePrivacy } from "./privacy";
 
 type Props = {
   tasks: TaskBuckets;
@@ -61,6 +62,7 @@ export function TaskItem({
   completing: boolean;
   onComplete: (task: Task) => void;
 }) {
+  const p = usePrivacy();
   return (
     <li className={`task ${completing ? "task--completing" : ""}`}>
       <button
@@ -72,9 +74,9 @@ export function TaskItem({
         disabled={completing}
       />
       <div className="task-body">
-        <div className="task-content">{task.content}</div>
+        <div className="task-content">{p.hide(task.content)}</div>
         <div className="task-labels">
-          <span className="label-chip">{task.context}</span>
+          <span className="label-chip">{p.hide(task.context)}</span>
         </div>
       </div>
       <a

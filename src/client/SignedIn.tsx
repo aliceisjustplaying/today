@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
   EventsResponse,
-  Me,
   NowState,
   PrepStepDraft,
   PrepToday,
@@ -18,8 +17,9 @@ import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
 import { onResume, signInAgain } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
+import { EyeIcon, PrivacyContext, loadPrivacy, redact, savePrivacy } from "./privacy";
 
-export function SignedIn({ me }: { me: Me }) {
+export function SignedIn() {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now.v2"));
   const [tasks, setTasks] = useState<TasksResponse | null>(() =>
     getCached<TasksResponse>("tasks.linear.v2"),
@@ -205,40 +205,60 @@ export function SignedIn({ me }: { me: Me }) {
     clearCached();
   }, []);
 
-  const handle = me.email.split("@")[0] ?? "you";
+  const [privacy, setPrivacy] = useState(loadPrivacy);
+  const togglePrivacy = () => {
+    setPrivacy(!privacy);
+    savePrivacy(!privacy);
+  };
 
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            t
+    <PrivacyContext.Provider value={privacy}>
+      <main className={privacy ? "shell shell--private" : "shell"}>
+        <header className="topbar">
+          <div className="brand">
+            <div className="brand-mark" aria-hidden="true">
+              t
+            </div>
+            <span className="brand-name">today</span>
           </div>
-          <span className="brand-name">today</span>
-        </div>
-        <form method="post" action="/auth/logout" onSubmit={onLogout}>
-          <button className="topbar-logout" type="submit" aria-label="Sign out">
-            {handle}
-          </button>
-        </form>
-      </header>
+          <div className="topbar-actions">
+            <button
+              type="button"
+              className="privacy-toggle"
+              aria-pressed={privacy}
+              aria-label={privacy ? "Privacy mode on: show emails and amounts" : "Hide emails and amounts for screenshots"}
+              onClick={togglePrivacy}
+            >
+              <EyeIcon off={privacy} />
+              {privacy && <span>Private</span>}
+            </button>
+            <form method="post" action="/auth/logout" onSubmit={onLogout}>
+              <button className="topbar-logout" type="submit" aria-label="Sign out" title="Sign out">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </header>
 
-      <Now state={now} onPrepChange={onPrepChange} onEditPrep={() => setPrepSheet("edit")} />
-      <Events events={events} />
-      <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
-      <Returns returns={returns} />
+        <Now state={now} onPrepChange={onPrepChange} onEditPrep={() => setPrepSheet("edit")} />
+        <Events events={events} />
+        <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
+        <Returns returns={returns} />
 
-      {error && <div className="error-toast">{error}</div>}
+        {error && <div className="error-toast">{privacy ? redact(error) : error}</div>}
 
-      {prepSheet && now && (
-        <PrepSheet
-          view={prepSheet}
-          steps={now.prep.steps}
-          onView={setPrepSheet}
-          onSave={onSavePrepSteps}
-          onClose={closePrepSheet}
-        />
-      )}
-    </main>
+        {prepSheet && now && (
+          <PrepSheet
+            view={prepSheet}
+            steps={now.prep.steps}
+            onView={setPrepSheet}
+            onSave={onSavePrepSteps}
+            onClose={closePrepSheet}
+          />
+        )}
+      </main>
+    </PrivacyContext.Provider>
   );
 }

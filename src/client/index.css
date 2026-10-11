@@ -123,7 +123,45 @@ a {
   letter-spacing: -0.02em;
   color: var(--ink);
 }
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.privacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  min-width: 30px;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.privacy-toggle[aria-pressed="true"] {
+  background: var(--coral);
+  color: #fff;
+}
+/* Privacy mode: a coral rule across the top so a screenshot can't be mistaken for the real thing. */
+.shell--private::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--coral);
+  z-index: 10;
+}
 .topbar-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
   font-size: 12px;
@@ -1390,11 +1428,25 @@ a {
   flex-shrink: 0;
   color: var(--accent);
 }
+/* Logo column, name line (name + status dot or pill), age; the email sits under the name. */
 .limits-head {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 7px;
+}
+.limits-head .provider-logo {
+  grid-row: 1;
+}
+.limits-head .limits-email {
+  grid-column: 2 / -1;
+}
+.limits-nameline {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 22px;
+  min-width: 0;
+  line-height: 22px;
 }
 .limits-name {
   margin: 0;
@@ -1410,6 +1462,8 @@ a {
 }
 .limits-dot {
   flex-shrink: 0;
+  /* Centered on the name's cap height rather than its line box. */
+  margin-top: 2px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -1417,11 +1471,6 @@ a {
 }
 .limits-dot--ok {
   background: var(--emerald);
-}
-.limits-title {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 .limits-balance-name {
   overflow: hidden;
@@ -1455,7 +1504,6 @@ a {
   color: var(--muted);
 }
 .limits-age {
-  margin-left: auto;
   flex-shrink: 0;
   min-width: 22px;
   text-align: right;
@@ -1563,19 +1611,37 @@ a {
 .limits-balances-title {
   font-size: 15px;
 }
+/* Logo | name over email | amount in a fixed right-aligned column, detail right-aligned under it. */
 .limits-balance {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) minmax(76px, max-content);
   align-items: center;
-  column-gap: 6px;
-  padding: 4px 0;
+  column-gap: 7px;
+  padding: 5px 0;
   border-top: 1px solid var(--border);
   font-size: 13px;
+  line-height: 18px;
+}
+.limits-balance > .provider-logo {
+  grid-row: 1;
+}
+.limits-balance .limits-email {
+  grid-column: 2;
+}
+.limits-balance-amount,
+.limits-balance-set,
+.limits-balance-form {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .limits-balance:first-child {
   border-top: 0;
 }
 .limits-balance-name {
+  min-width: 0;
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -1584,9 +1650,17 @@ a {
   font-feature-settings: "tnum";
 }
 .limits-balance-detail {
-  margin-left: auto;
+  grid-column: 2 / -1;
+  justify-self: end;
+  text-align: right;
   font-size: 11px;
+  line-height: 15px;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.limits-balance-form {
+  grid-column: 2 / -1;
+  grid-row: auto;
 }
 .limits-balance[data-tone="low"] {
   background: var(--amber-tint);
@@ -1628,9 +1702,9 @@ a {
   text-underline-offset: 3px;
 }
 .limits-balance-sources {
-  flex-basis: 100%;
+  grid-column: 2 / -1;
   list-style: none;
-  margin: 2px 0 0 26px;
+  margin: 2px 0 0;
   padding: 0;
   font-size: 11px;
   color: var(--muted);

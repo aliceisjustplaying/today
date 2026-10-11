@@ -1,6 +1,7 @@
 import type { NowState, PrepUpdate } from "./types";
 import { BodyPills } from "./BodyPills";
 import { formatDateLong, formatRemaining, formatTime } from "./format";
+import { usePrivacy } from "./privacy";
 
 type Props = {
   state: NowState | null;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function Now({ state, onPrepChange, onEditPrep }: Props) {
+  const p = usePrivacy();
   if (!state) {
     return (
       <section className="now now--loading" aria-busy="true">
@@ -51,11 +53,11 @@ export function Now({ state, onPrepChange, onEditPrep }: Props) {
                 </span>
               )}
             </div>
-            <h2 className="now-anchor-title">{anchor.title}</h2>
+            <h2 className="now-anchor-title">{p.hide(anchor.title)}</h2>
             <div className="now-anchor-meta">
               <span className="now-anchor-time">{formatTime(anchor.start)}</span>
               {anchor.location && !anchor.isVirtual && (
-                <span className="now-anchor-loc">{anchor.location}</span>
+                <span className="now-anchor-loc">{p.hide(anchor.location)}</span>
               )}
               {anchor.isVirtual && <span className="now-anchor-virtual">virtual</span>}
             </div>
@@ -82,7 +84,7 @@ export function Now({ state, onPrepChange, onEditPrep }: Props) {
 
           {!hasTravel && !anchor.isVirtual && anchor.location && (
             <div className="now-travel-missing">
-              {travelError ? `travel: ${travelError}` : "no travel info"}
+              {travelError ? `travel: ${p.text(travelError)}` : "no travel info"}
             </div>
           )}
 

@@ -1,6 +1,7 @@
 import type { ReturnItem, ReturnsResponse } from "./types";
 import { formatDateShort } from "./format";
 import { OpenIcon } from "./icons";
+import { usePrivacy } from "./privacy";
 
 function dueLabel(item: ReturnItem): string {
   const fallback = item.due?.date.slice(0, 10);
@@ -29,16 +30,17 @@ export function Returns({ returns }: { returns: ReturnsResponse | null }) {
 }
 
 function ReturnRow({ item }: { item: ReturnItem }) {
+  const p = usePrivacy();
   return (
     <li className="return-item" data-urgency={item.urgency}>
       <div className="return-body">
         <div className="return-head">
-          <span className="return-merchant">{item.identifier}</span>
+          <span className="return-merchant">{p.hide(item.identifier)}</span>
           <span className="return-due">{dueLabel(item)}</span>
         </div>
-        <div className="return-title">{item.content}</div>
-        <div className="return-meta">{item.context}</div>
-        {item.description && <div className="return-action">{item.description}</div>}
+        <div className="return-title">{p.hide(item.content)}</div>
+        <div className="return-meta">{p.hide(item.context)}</div>
+        {item.description && <div className="return-action">{p.hide(item.description)}</div>}
       </div>
       <a
         className="row-open"
