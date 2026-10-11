@@ -17,6 +17,8 @@ beforeAll(() => {
   mkdirSync(join(staticDir, "assets"), { recursive: true });
   writeFileSync(join(staticDir, "index.html"), "<!doctype html><title>today</title>");
   writeFileSync(join(staticDir, "assets", "app.js"), "console.log('app')");
+  mkdirSync(join(staticDir, "privacy"));
+  writeFileSync(join(staticDir, "privacy", "index.html"), "<title>Privacy policy</title>");
 
   const config = loadConfig({
     ALLOWED_EMAIL: "me@example.com",
@@ -97,6 +99,14 @@ describe("app", () => {
     const res = await app.request("/assets/app.js", {}, env);
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("console.log('app')");
+  });
+
+  test("serves the privacy page without a session", async () => {
+    for (const path of ["/privacy", "/privacy/"]) {
+      const res = await app.request(path, {}, env);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain("Privacy policy");
+    }
   });
 
   test("falls back to index.html for client routes", async () => {

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Privacy policy · today</title>
+    <style>
+      body {
+        margin: 0 auto;
+        max-width: 640px;
+        padding: 32px 20px 48px;
+        font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #0b0e14;
+      }
+      h1 { font-size: 28px; margin: 0 0 4px; }
+      h2 { font-size: 18px; margin: 28px 0 8px; }
+      .updated { color: #6b7280; margin: 0 0 24px; }
+      a { color: #e7321f; }
+    </style>
+  </head>
+  <body>
+    <h1>Privacy policy</h1>
+    <p class="updated">today · last updated 11 October 2026</p>
+
+    <p>
+      today is a personal dashboard run by Alice for her own use. Only one Google account, hers,
+      is allowed to sign in. Anyone else who tries is refused and nothing about them is stored.
+    </p>
+
+    <h2>What it accesses</h2>
+    <p>
+      When the allowed user signs in with Google, today requests her basic profile (name, email
+      address) and read-only access to her Google Calendar (<code>calendar.readonly</code>). It
+      reads upcoming calendar events solely to display them to her in the app. It never creates,
+      changes or deletes calendar data.
+    </p>
+
+    <h2>What it stores, and where</h2>
+    <p>
+      The Google access and refresh tokens and a session record are stored in the app's SQLite
+      database on Alice's own server. Calendar events are not stored on the server; the browser
+      keeps a short-lived local cache so the page loads quickly.
+    </p>
+
+    <h2>Sharing</h2>
+    <p>
+      Nothing is sold, shared with third parties, or used for advertising or analytics. Google
+      user data is not used to train AI models. Its use complies with the
+      <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services
+      User Data Policy</a>, including the Limited Use requirements.
+    </p>
+
+    <h2>Deleting your data</h2>
+    <p>
+      Signing out deletes the session. Access can be revoked at any time from
+      <a href="https://myaccount.google.com/permissions">your Google account permissions</a>; on
+      request the stored tokens are deleted from the server.
+    </p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:aliceisjustplaying@gmail.com">aliceisjustplaying@gmail.com</a></p>
+
+    <p><a href="/">← today</a></p>
+  </body>
+</html>

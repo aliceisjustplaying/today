@@ -123,6 +123,8 @@ GET  /auth/google/callback
 POST /auth/logout
 ```
 
+Signed out, `/` shows a short description of the app, a Google sign-in link and a link to `/privacy`, a static privacy policy (`public/privacy/index.html`) that needs no session; both are required for Google OAuth app verification.
+
 All `/api/*` routes except `/api/ping` require a session. Unknown `/api/*` routes return JSON 404. Non-API routes fall through to static assets so the SPA can handle client routes.
 
 ## Configuration
