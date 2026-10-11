@@ -172,22 +172,48 @@ describe("app", () => {
     }
   });
 
-  test("session cookie authenticates and body state persists in SQLite", async () => {
+  test("session cookie authenticates and prep state persists in SQLite", async () => {
     const cookie = await sessionCookie();
 
     const me = await app.request("/api/me", { headers: { cookie } }, env);
     expect(await me.json()).toEqual({ email: "me@example.com", userSub: "user-1" });
 
     const update = await app.request(
-      "/api/body-state",
+      "/api/prep",
       {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ eaten: true, shaved: "yes" }),
+        body: JSON.stringify({ stepId: 1, done: true, runningLate: "yes" }),
       },
       env,
     );
     expect(update.status).toBe(200);
-    expect(await update.json()).toMatchObject({ id: 1, eaten: true, shaved: false });
+    const prep = await update.json();
+    expect(prep.runningLate).toBe(false);
+    expect(prep.steps.map((s: { label: string; done: boolean }) => [s.label, s.done])).toEqual([
+      ["ate", true],
+      ["showered", false],
+      ["shaved", false],
+      ["dressed", false],
+      ["packed", false],
+    ]);
+    expect(prep.remainingMinutes).toBe(40);
+
+    const unknown = await app.request(
+      "/api/prep",
+      { method: "POST", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ stepId: 99, done: true }) },
+      env,
+    );
+    expect(unknown.status).toBe(400);
+
+    const badSteps = await app.request(
+      "/api/prep/steps",
+      { method: "PUT", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ steps: [{ label: "", minutes: 5 }] }) },
+      env,
+    );
+    expect(badSteps.status).toBe(400);
+
+    const history = await app.request("/api/prep/history", { headers: { cookie } }, env);
+    expect((await history.json()).days).toHaveLength(30);
   });
 });

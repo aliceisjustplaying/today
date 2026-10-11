@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
-  BodyStateUpdate,
   EventsResponse,
   Me,
   NowState,
+  PrepStepDraft,
+  PrepToday,
+  PrepUpdate,
   ReturnsResponse,
   Task,
   TasksResponse,
 } from "./types";
 import { Now } from "./Now";
+import { PrepSheet } from "./PrepSheet";
 import { Returns } from "./Returns";
 import { Events } from "./Events";
 import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
 
 export function SignedIn({ me }: { me: Me }) {
-  const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now"));
+  const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now.v2"));
   const [tasks, setTasks] = useState<TasksResponse | null>(() =>
     getCached<TasksResponse>("tasks.linear.v2"),
   );
@@ -27,6 +30,7 @@ export function SignedIn({ me }: { me: Me }) {
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [prepSheet, setPrepSheet] = useState<"edit" | "history" | null>(null);
 
   const loadNow = useCallback(async () => {
     try {
@@ -38,7 +42,7 @@ export function SignedIn({ me }: { me: Me }) {
       if (!r.ok) throw new Error(`now ${r.status}`);
       const data = (await r.json()) as NowState;
       setNow(data);
-      setCached("now", data);
+      setCached("now.v2", data);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -109,21 +113,55 @@ export function SignedIn({ me }: { me: Me }) {
     };
   }, [loadNow, loadTasks, loadEvents, loadReturns]);
 
-  const onBodyStateChange = useCallback(
-    async (updates: BodyStateUpdate) => {
+  const applyPrep = useCallback((prep: PrepToday) => {
+    setNow((prev) => (prev ? { ...prev, prep } : prev));
+    loadNow();
+  }, [loadNow]);
+
+  const onPrepChange = useCallback(
+    async (update: PrepUpdate) => {
+      setNow((prev) =>
+        prev && {
+          ...prev,
+          prep: {
+            ...prev.prep,
+            ...("runningLate" in update ? { runningLate: update.runningLate } : {}),
+            steps: prev.prep.steps.map((s) =>
+              "stepId" in update && s.id === update.stepId ? { ...s, done: update.done } : s,
+            ),
+          },
+        },
+      );
       try {
-        const r = await fetch("/api/body-state", {
+        const r = await fetch("/api/prep", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(updates),
+          body: JSON.stringify(update),
         });
-        if (r.ok) loadNow();
+        if (!r.ok) throw new Error(`prep ${r.status}`);
+        applyPrep((await r.json()) as PrepToday);
       } catch (e) {
         setError(String(e));
+        loadNow();
       }
     },
-    [loadNow],
+    [applyPrep, loadNow],
   );
+
+  const onSavePrepSteps = useCallback(
+    async (steps: PrepStepDraft[]) => {
+      const r = await fetch("/api/prep/steps", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ steps }),
+      });
+      if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `steps ${r.status}`);
+      applyPrep((await r.json()) as PrepToday);
+    },
+    [applyPrep],
+  );
+
+  const closePrepSheet = useCallback(() => setPrepSheet(null), []);
 
   const onCompleteTask = useCallback(
     async (task: Task) => {
@@ -178,12 +216,22 @@ export function SignedIn({ me }: { me: Me }) {
         </form>
       </header>
 
-      <Now state={now} onBodyStateChange={onBodyStateChange} />
+      <Now state={now} onPrepChange={onPrepChange} onEditPrep={() => setPrepSheet("edit")} />
       <Events events={events} />
       <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
       <Returns returns={returns} />
 
       {error && <div className="error-toast">{error}</div>}
+
+      {prepSheet && now && (
+        <PrepSheet
+          view={prepSheet}
+          steps={now.prep.steps}
+          onView={setPrepSheet}
+          onSave={onSavePrepSteps}
+          onClose={closePrepSheet}
+        />
+      )}
     </main>
   );
 }

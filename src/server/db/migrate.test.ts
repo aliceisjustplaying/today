@@ -39,7 +39,10 @@ test("imports a wrangler d1 export into a fresh database", () => {
   const db = new Database(databasePath);
   expect(db.query("SELECT email FROM sessions").all()).toEqual([{ email: "me@example.com" }]);
   expect(db.query("SELECT refresh_token FROM oauth_tokens").all()).toEqual([{ refresh_token: "refresh" }]);
-  expect(db.query("SELECT eaten, dressed FROM body_state").all()).toEqual([{ eaten: 1, dressed: 1 }]);
+  expect(db.query("SELECT day, step_id, checked_at FROM prep_checks ORDER BY step_id").all()).toEqual([
+    { day: "2023-11-14", step_id: 1, checked_at: 1700000000 },
+    { day: "2023-11-14", step_id: 4, checked_at: 1700000000 },
+  ]);
   db.close();
 
   const again = runMigrate(databasePath, exportPath);

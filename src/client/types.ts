@@ -1,18 +1,17 @@
 export type Me = { email: string; userSub: string };
 
-export type BodyState = {
-  id: number;
-  eaten: boolean;
-  showered: boolean;
-  shaved: boolean;
-  dressed: boolean;
-  packed: boolean;
-  runningLate: boolean;
-  updatedAt: string;
-};
+export type PrepStep = { id: number; label: string; minutes: number; done: boolean; doneAt: string | null };
 
-export type PrepKey = "eaten" | "showered" | "shaved" | "dressed" | "packed";
-export type PrepStep = { key: PrepKey; minutes: number; done: boolean };
+export type PrepToday = { day: string; steps: PrepStep[]; runningLate: boolean; remainingMinutes: number };
+
+export type PrepUpdate = { stepId: number; done: boolean } | { runningLate: boolean };
+
+export type PrepStepDraft = { id?: number; label: string; minutes: number };
+
+export type PrepHistory = {
+  days: { day: string; runningLate: boolean; checks: Record<string, string> }[];
+  steps: { id: number; label: string; removed: boolean; doneDays: number; avgDoneMinute: number | null }[];
+};
 
 export type TravelMode = "TRANSIT" | "DRIVE" | "WALK" | "BICYCLE";
 
@@ -40,8 +39,7 @@ export type NowState = {
     prepRequiredMinutes: number;
     bufferMinutes: number;
   } | null;
-  bodyState: BodyState;
-  prepSteps: PrepStep[];
+  prep: PrepToday;
   travelError: string | null;
 };
 
@@ -100,15 +98,6 @@ export type EventsResponse = {
   events: CalendarEvent[];
   nextAnchor: CalendarEvent | null;
 };
-
-export type BodyStateUpdate = Partial<{
-  eaten: boolean;
-  showered: boolean;
-  shaved: boolean;
-  dressed: boolean;
-  packed: boolean;
-  runningLate: boolean;
-}>;
 
 export type LimitsWindow = {
   window: string;

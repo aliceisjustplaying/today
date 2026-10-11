@@ -387,15 +387,16 @@ a {
   border: 1.5px solid var(--border-strong);
   background: var(--surface);
   border-radius: var(--radius-pill);
-  padding: 4px 10px;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
+  line-height: 1;
   color: var(--ink-soft);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 30px;
+  height: 30px;
   transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease,
     color 0.15s ease;
   font-family: inherit;
@@ -406,20 +407,26 @@ a {
 .pill:active {
   transform: scale(0.94);
 }
+.pill-label,
 .pill-mins {
-  font-size: 10px;
+  display: block;
+  line-height: 1;
+}
+.pill-mins {
+  font-size: 12px;
   color: var(--muted);
   font-feature-settings: "tnum";
-  font-weight: 600;
+  font-weight: 500;
 }
 .pill--done {
   background: var(--emerald-tint);
   border-color: var(--emerald);
   color: var(--emerald-deep);
+}
+.pill--done .pill-label {
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
   text-decoration-color: var(--emerald);
-  text-underline-offset: 2px;
 }
 .pill--done .pill-mins {
   color: var(--emerald);
@@ -427,6 +434,262 @@ a {
 .pill--alert-on {
   background: var(--rose-tint);
   border-color: var(--rose);
+  color: var(--rose-deep);
+}
+.pill--edit {
+  border-style: dashed;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.now-empty-link {
+  margin-left: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ─────── prep sheet ─────── */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(11, 14, 20, 0.32);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  box-shadow: var(--shadow-lift);
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.sheet-tabs {
+  display: inline-flex;
+  background: var(--bg-soft);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+.sheet-tab {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.sheet-tab[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.sheet-close {
+  border: 0;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--muted);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+.prep-edit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.prep-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.prep-edit-label,
+.prep-edit-mins input {
+  font: inherit;
+  font-size: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px;
+  height: 38px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.prep-edit-label {
+  flex: 1;
+  min-width: 0;
+}
+.prep-edit-mins {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.prep-edit-mins input {
+  width: 54px;
+  padding: 0 6px;
+  text-align: right;
+  font-feature-settings: "tnum";
+}
+.prep-edit-btn {
+  border: 1.5px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+  border-radius: 10px;
+  width: 34px;
+  height: 38px;
+  font-size: 15px;
+  cursor: pointer;
+  flex: none;
+}
+.prep-edit-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.prep-edit-btn--remove {
+  color: var(--coral-deep);
+}
+.prep-edit-add {
+  margin-top: 8px;
+  width: 100%;
+  height: 38px;
+  border: 1.5px dashed var(--border-strong);
+  background: none;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.sheet-total {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  font-feature-settings: "tnum";
+}
+.sheet-btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.sheet-btn--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.sheet-btn:disabled {
+  opacity: 0.5;
+}
+.prep-history-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 0;
+}
+.prep-avg {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.prep-avg th {
+  text-align: left;
+  font-weight: 600;
+  padding: 3px 0;
+}
+.prep-avg td {
+  text-align: right;
+  font-feature-settings: "tnum";
+  color: var(--muted);
+}
+.prep-avg-time {
+  color: var(--ink) !important;
+}
+.prep-avg--removed th {
+  color: var(--muted-soft);
+  text-decoration: line-through;
+}
+.prep-grid-wrap {
+  overflow-x: auto;
+}
+.prep-grid {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 10px;
+  font-feature-settings: "tnum";
+  width: 100%;
+}
+.prep-grid thead th {
+  font-weight: 600;
+  color: var(--muted);
+  padding-bottom: 2px;
+  max-width: 48px;
+}
+.prep-grid thead th span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prep-grid-col--removed {
+  text-decoration: line-through;
+}
+.prep-grid-day {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-right: 4px;
+}
+.prep-cell {
+  background: var(--bg-soft);
+  border-radius: 4px;
+  height: 20px;
+  text-align: center;
+  color: var(--emerald-deep);
+}
+.prep-cell--done {
+  background: var(--emerald-tint);
+}
+.prep-cell--late {
+  background: var(--rose-tint);
   color: var(--rose-deep);
 }
 

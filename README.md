@@ -60,7 +60,7 @@ bunx wrangler d1 export today --remote --output today-d1.sql
 DATABASE_PATH=/path/to/today.sqlite bun run db:migrate today-d1.sql
 ```
 
-`db:migrate <file>` applies the migrations, loads the export into a scratch in-memory database, and copies the app tables (`sessions`, `oauth_tokens`, `candidates`, `body_state`, `prefs`) into the target. It refuses to import into tables that already have rows.
+`db:migrate <file>` applies the first (D1-era) migration, loads the export into a scratch in-memory database, and copies the app tables (`sessions`, `oauth_tokens`, `candidates`, `body_state`, `prefs`) into the target. It refuses to import into a database that was already migrated. The remaining migrations then run, which carries `body_state` into the prep tables.
 
 ## Layout
 
