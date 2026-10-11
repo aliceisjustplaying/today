@@ -149,15 +149,6 @@ a {
   background: var(--coral);
   color: #fff;
 }
-/* Privacy mode: a coral rule across the top so a screenshot can't be mistaken for the real thing. */
-.shell--private::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--coral);
-  z-index: 10;
-}
 .topbar-logout {
   display: inline-flex;
   align-items: center;
@@ -1597,11 +1588,6 @@ a {
   white-space: nowrap;
   font-feature-settings: "tnum";
 }
-.limits-window-note {
-  grid-column: 2 / -1;
-  font-size: 11px;
-  color: var(--tone-ink);
-}
 .limits-spend {
   margin: 3px 0 0;
   font-size: 12px;
@@ -1661,24 +1647,6 @@ a {
 .limits-balance-form {
   grid-column: 2 / -1;
   grid-row: auto;
-}
-.limits-balance[data-tone="low"] {
-  background: var(--amber-tint);
-}
-.limits-balance[data-tone="low"] .limits-balance-amount {
-  color: var(--amber-deep);
-}
-.limits-balance[data-tone="out"] {
-  background: var(--coral-tint);
-}
-.limits-balance[data-tone="out"] .limits-balance-amount {
-  color: var(--coral-deep);
-}
-.limits-balance[data-tone] {
-  margin: 0 -6px;
-  padding-left: 6px;
-  padding-right: 6px;
-  border-radius: 6px;
 }
 .limits-balance-edit,
 .limits-balance-set {

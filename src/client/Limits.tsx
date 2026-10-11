@@ -4,7 +4,7 @@ import { getCached, setCached } from "./cache";
 import { ProviderLogo } from "./logos";
 import { onResume, signInAgain } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
-import { usePrivacy } from "./privacy";
+import { redactPlanDate, usePrivacy } from "./privacy";
 import {
   ageLabel,
   balanceRow,
@@ -13,7 +13,6 @@ import {
   isBalanceOnly,
   parseDollars,
   planChip,
-  projectionLabel,
   resetLabel,
   resetTitle,
   sortByUrgency,
@@ -129,7 +128,7 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
           ))}
         </ul>
       )}
-      {spend.length > 0 && <p className="limits-spend">{p.text(spend.join(" · "))}</p>}
+      {spend.length > 0 && <p className="limits-spend">{p.figures(spend.join(" · "))}</p>}
     </section>
   );
 }
@@ -137,7 +136,7 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
 function PlanChip({ account }: { account: LimitsAccount }) {
   const p = usePrivacy();
   const chip = planChip(account);
-  return chip ? <span className="limits-plan">{p.text(chip)}</span> : null;
+  return chip ? <span className="limits-plan">{p.on ? redactPlanDate(chip) : chip}</span> : null;
 }
 
 /** The account's email on its own line under the name, cut with an ellipsis rather than wrapping. */
@@ -202,7 +201,6 @@ function BalanceEdit({ account: a, onDone }: { account: LimitsAccount; onDone: (
 
 function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
   const pct = clampPercent(w.usedPercent);
-  const projection = projectionLabel(w, now);
   return (
     <li className="limits-window" data-tone={windowTone(w)}>
       <span className="limits-window-name">{w.window}</span>
@@ -220,7 +218,6 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
       <span className="limits-window-reset num" title={resetTitle(w, now)}>
         {resetLabel(w, now)}
       </span>
-      {projection && <span className="limits-window-note">{projection}</span>}
     </li>
   );
 }
@@ -234,9 +231,9 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
       <h2 className="limits-name limits-balances-title">Balances</h2>
       <ul className="limits-balance-list">
         {accounts.map((a) => {
-          const { amount, detail, tone, title, sources } = balanceRow(a);
+          const { amount, detail, title, sources } = balanceRow(a);
           return (
-            <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status} data-tone={tone}>
+            <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status}>
               <ProviderLogo provider={a.provider} />
               <span className="limits-name-row">
                 <span className="limits-balance-name">{a.label}</span>
