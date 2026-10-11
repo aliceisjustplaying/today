@@ -47,6 +47,7 @@ export type NowState = {
 
 export type Task = {
   id: string;
+  workspace: number;
   identifier: string;
   content: string;
   description: string;

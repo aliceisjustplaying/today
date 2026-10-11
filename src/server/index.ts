@@ -29,7 +29,7 @@ app.get("/api/me", requireSession, (c) => {
 
 app.get("/api/tasks", requireSession, async (c) => {
   try {
-    const tasks = await listAssignedIssues(c.env.LINEAR_API_KEY);
+    const tasks = await listAssignedIssues(c.env.LINEAR_API_KEYS);
     const today = todayKeyInTz(c.env.TIMEZONE);
     const sevenDay = addDaysToKey(today, 7);
     const buckets = bucketTasks(tasks, today, sevenDay);
@@ -66,7 +66,7 @@ app.get("/api/returns", requireSession, async (c) => {
   try {
     return c.json(
       await getReturns({
-        apiKey: c.env.LINEAR_API_KEY,
+        apiKeys: c.env.LINEAR_API_KEYS,
         label: c.env.LINEAR_RETURNS_LABEL,
         timezone: c.env.TIMEZONE,
       }),
@@ -90,11 +90,13 @@ app.get("/api/now", requireSession, async (c) => {
   }
 });
 
-app.post("/api/tasks/:id/close", requireSession, async (c) => {
+app.post("/api/tasks/:workspace/:id/close", requireSession, async (c) => {
   const id = c.req.param("id");
+  const apiKey = c.env.LINEAR_API_KEYS[Number(c.req.param("workspace"))];
+  if (!apiKey) return c.json({ error: "unknown_workspace" }, 400);
   try {
-    await completeIssue(c.env.LINEAR_API_KEY, id);
-    console.log(`completed Linear issue ${id}`);
+    await completeIssue(apiKey, id);
+    console.log(`completed Linear issue ${id} (workspace ${c.req.param("workspace")})`);
     return c.json({ ok: true });
   } catch (e) {
     return c.json({ error: String(e) }, 502);

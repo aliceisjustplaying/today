@@ -9,7 +9,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - DB: **SQLite** via `bun:sqlite` + Drizzle (`src/server/db/index.ts`); schema in `src/server/db/schema.ts`, migrations in `drizzle/migrations` applied at startup.
 - Frontend: **React 19 + Vite**, built to `dist/client` and served by the same Hono app (`serveStatic`, SPA fallback to `index.html`).
 - Auth: **Google OAuth** as the login. Allowlist is exactly one email (`ALLOWED_EMAIL`, read from `vars`); any other Google account that completes the flow gets a 403 and no session. Google Calendar uses the stored OAuth grant.
-- Tasks: **Linear** via GraphQL with a personal API key (`LINEAR_API_KEY`, `src/server/linear.ts`). Today/Upcoming are `viewer.assignedIssues` (open states, by `dueDate`); Returns are issues with the `LINEAR_RETURNS_LABEL` label regardless of assignee; completing is `issueUpdate` to the team's completed state.
+- Tasks: **Linear** via GraphQL with personal API keys, one per workspace (`LINEAR_API_KEY` / `LINEAR_API_KEYS` → `c.env.LINEAR_API_KEYS`, `src/server/linear.ts`). Every list query fans out across keys and tags each task with its `workspace` index; completion uses that index to pick the key. Today/Upcoming are `viewer.assignedIssues` (open states, by `dueDate`); Returns are issues with the `LINEAR_RETURNS_LABEL` label regardless of assignee; completing is `issueUpdate` to the team's completed state.
 - Travel time: **Google Routes API** (`computeRouteMatrix`). The legacy Distance Matrix API is deprecated — do not use it.
 - Package manager: Bun. Run scripts with `bun run …`, install with `bun install`, never npm/yarn/pnpm. CLIs via `bunx`.
 

@@ -37,7 +37,8 @@ All configuration is environment variables, read once at startup by `src/server/
 | `GOOGLE_OAUTH_CLIENT_ID` | yes | | Google OAuth web client |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | yes (secret) | | Google OAuth web client |
 | `SESSION_SECRET` | yes (secret) | | Signs the session cookie |
-| `LINEAR_API_KEY` | yes (secret) | | Personal Linear API key (tasks, completion, Returns) |
+| `LINEAR_API_KEY` | one of these (secret) | | Personal Linear API key (tasks, completion, Returns) |
+| `LINEAR_API_KEYS` | one of these (secret) | | Several personal keys, one per workspace, separated by newlines, spaces or commas; merged with `LINEAR_API_KEY` |
 | `LINEAR_RETURNS_LABEL` | no | `Returns` | Linear label whose open issues fill the Returns section |
 | `GOOGLE_OAUTH_REDIRECT_URI` | no | derived from the request | Public `/auth/google/callback` URL; set it behind a proxy |
 | `GOOGLE_API_KEY` | no (secret) | | Routes API key for travel estimates |

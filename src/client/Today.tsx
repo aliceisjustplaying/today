@@ -4,7 +4,7 @@ import { OpenIcon } from "./icons";
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (id: string) => void;
+  onComplete: (task: Task) => void;
 };
 
 export function Today({ tasks, completing, onComplete }: Props) {
@@ -60,7 +60,7 @@ function TaskItem({
 }: {
   task: Task;
   completing: boolean;
-  onComplete: (id: string) => void;
+  onComplete: (task: Task) => void;
 }) {
   return (
     <li className={`task ${completing ? "task--completing" : ""}`}>
@@ -68,7 +68,7 @@ function TaskItem({
         type="button"
         className="task-check"
         data-completing={completing ? "true" : undefined}
-        onClick={() => onComplete(task.id)}
+        onClick={() => onComplete(task)}
         aria-label={`mark "${task.content}" as done`}
         disabled={completing}
       />

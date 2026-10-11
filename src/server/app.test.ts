@@ -41,15 +41,30 @@ async function sessionCookie() {
     email: "me@example.com",
     createdAt: now,
     expiresAt: new Date(now.getTime() + 60_000),
-  });
+  }).onConflictDoNothing();
   return serializeSigned("today_session", "sid-1", env.SESSION_SECRET);
 }
 
 describe("config", () => {
   test("fails fast on missing required env", () => {
     expect(() => loadConfig({ ALLOWED_EMAIL: "me@example.com" })).toThrow(
-      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET, LINEAR_API_KEY",
+      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET, LINEAR_API_KEY or LINEAR_API_KEYS",
     );
+  });
+
+  test("collects Linear keys from LINEAR_API_KEY and LINEAR_API_KEYS", () => {
+    const base = {
+      ALLOWED_EMAIL: "me@example.com",
+      GOOGLE_OAUTH_CLIENT_ID: "id",
+      GOOGLE_OAUTH_CLIENT_SECRET: "secret",
+      SESSION_SECRET: "s",
+    };
+    expect(loadConfig({ ...base, LINEAR_API_KEY: "one" }).LINEAR_API_KEYS).toEqual(["one"]);
+    expect(
+      loadConfig({ ...base, LINEAR_API_KEY: "one", LINEAR_API_KEYS: "two\nthree, one" })
+        .LINEAR_API_KEYS,
+    ).toEqual(["one", "two", "three"]);
+    expect(() => loadConfig(base)).toThrow("LINEAR_API_KEY or LINEAR_API_KEYS");
   });
 
   test("applies defaults", () => {
@@ -89,6 +104,32 @@ describe("app", () => {
       const res = await app.request(path, {}, env);
       expect(res.status).toBe(200);
       expect(await res.text()).toContain("<title>today</title>");
+    }
+  });
+
+  test("completing routes to the workspace's key and rejects unknown workspaces", async () => {
+    const cookie = await sessionCookie();
+    const realFetch = globalThis.fetch;
+    const auths: string[] = [];
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      auths.push(new Headers(init?.headers).get("authorization")!);
+      const { query } = JSON.parse(String(init?.body));
+      return Response.json(
+        query.includes("issueUpdate")
+          ? { data: { issueUpdate: { success: true } } }
+          : { data: { issue: { team: { states: { nodes: [{ id: "done", position: 0 }] } } } } },
+      );
+    }) as typeof fetch;
+    try {
+      const multi = { ...env, LINEAR_API_KEYS: ["key-a", "key-b"] };
+      const ok = await app.request("/api/tasks/1/uuid-9/close", { method: "POST", headers: { cookie } }, multi);
+      expect(ok.status).toBe(200);
+      expect(auths).toEqual(["key-b", "key-b"]);
+
+      const bad = await app.request("/api/tasks/2/uuid-9/close", { method: "POST", headers: { cookie } }, multi);
+      expect(bad.status).toBe(400);
+    } finally {
+      globalThis.fetch = realFetch;
     }
   });
 

@@ -5,7 +5,7 @@ import { OpenIcon } from "./icons";
 type Props = {
   tasks: TasksResponse | null;
   completing: Set<string>;
-  onComplete: (id: string) => void;
+  onComplete: (task: Task) => void;
 };
 
 function groupByDate(tasks: Task[]): Map<string, Task[]> {
@@ -40,7 +40,7 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
                   type="button"
                   className="task-check"
                   data-completing={completing.has(t.id) ? "true" : undefined}
-                  onClick={() => onComplete(t.id)}
+                  onClick={() => onComplete(t)}
                   aria-label={`mark "${t.content}" as done`}
                   disabled={completing.has(t.id)}
                 />

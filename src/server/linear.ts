@@ -10,6 +10,7 @@ export class LinearError extends Error {
 
 export type Task = {
   id: string;
+  workspace: number;
   identifier: string;
   content: string;
   description: string;
@@ -64,9 +65,10 @@ async function linearRequest<T>(
   return body.data;
 }
 
-function toTask(issue: IssueNode): Task {
+function toTask(issue: IssueNode, workspace: number): Task {
   return {
     id: issue.id,
+    workspace,
     identifier: issue.identifier,
     content: issue.title,
     description: issue.description ?? "",
@@ -77,23 +79,42 @@ function toTask(issue: IssueNode): Task {
 }
 
 async function collectIssues(
+  workspace: number,
   fetchPage: (after: string | null) => Promise<IssueConnection>,
 ): Promise<Task[]> {
   const tasks: Task[] = [];
   let after: string | null = null;
   do {
     const page = await fetchPage(after);
-    tasks.push(...page.nodes.map(toTask));
+    tasks.push(...page.nodes.map((issue) => toTask(issue, workspace)));
     after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
   } while (after);
   return tasks;
 }
 
-export function listAssignedIssues(apiKey: string): Promise<Task[]> {
+async function acrossWorkspaces(
+  apiKeys: string[],
+  list: (apiKey: string, workspace: number) => Promise<Task[]>,
+): Promise<Task[]> {
+  const perWorkspace = await Promise.all(apiKeys.map((apiKey, i) => list(apiKey, i)));
+  return perWorkspace.flat();
+}
+
+export function listAssignedIssues(apiKeys: string[]): Promise<Task[]> {
+  return acrossWorkspaces(apiKeys, listAssignedIssuesIn);
+}
+
+export function listIssuesByLabel(apiKeys: string[], label: string): Promise<Task[]> {
+  return acrossWorkspaces(apiKeys, (apiKey, workspace) =>
+    listIssuesByLabelIn(apiKey, workspace, label),
+  );
+}
+
+function listAssignedIssuesIn(apiKey: string, workspace: number): Promise<Task[]> {
   const query = `query AssignedIssues($after: String, $filter: IssueFilter) {
     viewer { assignedIssues(first: 100, after: $after, filter: $filter) { ${ISSUE_FIELDS} } }
   }`;
-  return collectIssues(async (after) => {
+  return collectIssues(workspace, async (after) => {
     const data = await linearRequest<{ viewer: { assignedIssues: IssueConnection } }>(
       apiKey,
       query,
@@ -103,11 +124,11 @@ export function listAssignedIssues(apiKey: string): Promise<Task[]> {
   });
 }
 
-export function listIssuesByLabel(apiKey: string, label: string): Promise<Task[]> {
+function listIssuesByLabelIn(apiKey: string, workspace: number, label: string): Promise<Task[]> {
   const query = `query LabelledIssues($after: String, $filter: IssueFilter) {
     issues(first: 100, after: $after, filter: $filter) { ${ISSUE_FIELDS} }
   }`;
-  return collectIssues(async (after) => {
+  return collectIssues(workspace, async (after) => {
     const data = await linearRequest<{ issues: IssueConnection }>(apiKey, query, {
       after,
       filter: {

@@ -5,6 +5,7 @@ import type {
   Me,
   NowState,
   ReturnsResponse,
+  Task,
   TasksResponse,
 } from "./types";
 import { Now } from "./Now";
@@ -126,14 +127,15 @@ export function SignedIn({ me }: { me: Me }) {
   );
 
   const onCompleteTask = useCallback(
-    async (id: string) => {
+    async (task: Task) => {
+      const { id } = task;
       setCompleting((prev) => {
         const next = new Set(prev);
         next.add(id);
         return next;
       });
       try {
-        const r = await fetch(`/api/tasks/${encodeURIComponent(id)}/close`, {
+        const r = await fetch(`/api/tasks/${task.workspace}/${encodeURIComponent(id)}/close`, {
           method: "POST",
         });
         if (r.status === 401) {

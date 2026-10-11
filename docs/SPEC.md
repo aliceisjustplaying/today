@@ -14,7 +14,7 @@ The current app includes:
 
 - Google sign-in with a single allowlisted email.
 - Google Calendar read access for today and tomorrow.
-- Linear issues assigned to you, read and completed through a personal Linear API key.
+- Linear issues assigned to you, read and completed through personal Linear API keys, one per workspace, merged into one view.
 - A Now panel centered on the next calendar anchor.
 - Body/prep state stored in SQLite and used to calculate prep time.
 - Google Routes travel estimates from a configured home address to the next anchor location.
@@ -80,7 +80,7 @@ The Calendar section lists today's events and optionally expands tomorrow's even
 
 ### Today
 
-The Today section lists open Linear issues assigned to you (any state except completed or canceled) that are overdue or due today, across all teams. Each shows its project, or team key when it has no project. Issues can be completed from the app, which moves them to the team's first completed state, and opened in Linear.
+The Today section lists open Linear issues assigned to you (any state except completed or canceled) that are overdue or due today, across all teams. Each shows its project, or team key when it has no project. Issues can be completed from the app, which moves them to the team's first completed state using the key of the issue's workspace (`:workspace` is its index in the configured key list), and opened in Linear.
 
 ### Upcoming
 
@@ -88,7 +88,7 @@ The Upcoming section lists the same assigned issues due in the next seven days, 
 
 ### Returns
 
-The Returns section lists open Linear issues carrying the label named by `LINEAR_RETURNS_LABEL` (default `Returns`, case-insensitive), whoever they are assigned to. Due dates determine urgency and issues without dates remain visible at the end of the section.
+The Returns section lists open Linear issues carrying the label named by `LINEAR_RETURNS_LABEL` (default `Returns`, case-insensitive), whoever they are assigned to. It is merged across all configured workspaces. Due dates determine urgency and issues without dates remain visible at the end of the section.
 
 ## Runtime Behavior
 
@@ -103,7 +103,7 @@ GET  /api/tasks
 GET  /api/events
 GET  /api/returns
 GET  /api/now
-POST /api/tasks/:id/close
+POST /api/tasks/:workspace/:id/close
 POST /api/body-state
 ```
 
@@ -128,7 +128,7 @@ ALLOWED_EMAIL
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
 SESSION_SECRET
-LINEAR_API_KEY
+LINEAR_API_KEY or LINEAR_API_KEYS
 ```
 
 Optional:

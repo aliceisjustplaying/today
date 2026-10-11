@@ -40,6 +40,7 @@ function issue(overrides: Partial<Record<string, unknown>> = {}) {
 function task(content: string, date: string | null): Task {
   return {
     id: content,
+    workspace: 0,
     identifier: content,
     content,
     description: "",
@@ -74,7 +75,7 @@ describe("listAssignedIssues", () => {
       },
     ]);
 
-    const tasks = await listAssignedIssues("lin_api_key");
+    const tasks = await listAssignedIssues(["lin_api_key"]);
 
     expect(calls.map((c) => c.variables.after)).toEqual([null, "c1"]);
     expect(calls[0]!.auth).toBe("lin_api_key");
@@ -84,6 +85,7 @@ describe("listAssignedIssues", () => {
     expect(tasks).toEqual([
       {
         id: "uuid-1",
+        workspace: 0,
         identifier: "ALI-1",
         content: "Post the parcel",
         description: "",
@@ -97,9 +99,48 @@ describe("listAssignedIssues", () => {
 
   test("surfaces GraphQL errors as LinearError", async () => {
     mockLinear([{ errors: [{ message: "Authentication required" }] }]);
-    const result = listAssignedIssues("bad");
+    const result = listAssignedIssues(["bad"]);
     await expect(result).rejects.toBeInstanceOf(LinearError);
     await expect(result).rejects.toThrow("Authentication required");
+  });
+});
+
+describe("several workspaces", () => {
+  test("merges issues from every key and tags each with its workspace", async () => {
+    const calls: string[] = [];
+    globalThis.fetch = mock(async (_url: string | URL | Request, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get("authorization")!;
+      calls.push(auth);
+      const node = issue({ id: `issue-${auth}`, identifier: auth === "key-a" ? "A-1" : "B-1" });
+      return Response.json({
+        data: {
+          viewer: {
+            assignedIssues: { nodes: [node], pageInfo: { hasNextPage: false, endCursor: null } },
+          },
+        },
+      });
+    }) as unknown as typeof fetch;
+
+    const tasks = await listAssignedIssues(["key-a", "key-b"]);
+
+    expect(calls.sort()).toEqual(["key-a", "key-b"]);
+    expect(tasks.map((t) => [t.identifier, t.workspace])).toEqual([
+      ["A-1", 0],
+      ["B-1", 1],
+    ]);
+  });
+
+  test("one failing workspace fails the whole list", async () => {
+    globalThis.fetch = mock(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (new Headers(init?.headers).get("authorization") === "bad") {
+        return Response.json({ errors: [{ message: "Authentication required" }] }, { status: 400 });
+      }
+      return Response.json({
+        data: { viewer: { assignedIssues: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } } },
+      });
+    }) as unknown as typeof fetch;
+
+    await expect(listAssignedIssues(["good", "bad"])).rejects.toBeInstanceOf(LinearError);
   });
 });
 
@@ -121,7 +162,7 @@ describe("getReturns", () => {
     ]);
 
     const result = await getReturns({
-      apiKey: "k",
+      apiKeys: ["k"],
       label: "Returns",
       now: new Date("2026-10-11T09:00:00Z"),
       timezone: "Europe/London",

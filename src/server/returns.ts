@@ -28,13 +28,13 @@ function urgencyFor(daysUntilDue: number | null): ReturnUrgency {
 }
 
 export function getReturns(opts: {
-  apiKey: string;
+  apiKeys: string[];
   label: string;
   now?: Date;
   timezone?: string;
 }): Promise<ReturnsResponse> {
   const todayKey = todayKeyInTz(opts.timezone ?? "Europe/London", opts.now);
-  return listIssuesByLabel(opts.apiKey, opts.label).then((tasks) => {
+  return listIssuesByLabel(opts.apiKeys, opts.label).then((tasks) => {
     const items = tasks
       .map((task): ReturnItem => {
         const dueKey = task.due?.date.slice(0, 10);
