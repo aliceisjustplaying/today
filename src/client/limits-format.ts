@@ -96,3 +96,8 @@ export function updatedLabel(a: LimitsAccount, now: number): string {
   const ago = now - a.observedAt;
   return ago < MINUTE ? "updated just now" : `updated ${formatDuration(ago)} ago`;
 }
+
+/** The status pill: a lapsed subscription is neutral and says what to do, not a red error. */
+export function statusLabel(a: LimitsAccount): string {
+  return a.status === "inactive" ? "inactive · renew" : a.status;
+}

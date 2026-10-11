@@ -129,8 +129,11 @@ export type LimitsAccount = {
   id: string;
   provider: string;
   label: string;
-  status: "ok" | "error" | "pending";
+  /** "inactive": the credential works but the subscription lapsed or the balance is empty. Not an error. */
+  status: "ok" | "inactive" | "error" | "pending";
   error: string | null;
+  /** Why the account is inactive, or a partial-data note on an ok account (limits#4; absent before it). */
+  notice?: string | null;
   lastAttemptAt: number | null;
   observedAt: number | null;
   windows: LimitsWindow[];

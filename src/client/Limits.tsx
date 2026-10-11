@@ -6,6 +6,7 @@ import {
   projectionLabel,
   resetLabel,
   spendLines,
+  statusLabel,
   updatedLabel,
   windowTone,
 } from "./limits-format";
@@ -97,10 +98,11 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
         <span className="limits-provider">{PROVIDER_NAMES[a.provider] ?? a.provider}</span>
       </div>
       <div className="limits-meta">
-        <span className={`limits-status limits-status--${a.status}`}>{a.status}</span>
+        <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
         <span>{updatedLabel(a, now)}</span>
       </div>
       {a.status === "error" && a.error && <p className="limits-error">{a.error}</p>}
+      {a.status !== "error" && a.notice && <p className="limits-notice">{a.notice}</p>}
       {a.windows.length > 0 && (
         <ul className="limits-windows">
           {a.windows.map((w) => (
