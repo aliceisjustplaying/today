@@ -18,6 +18,14 @@ import type { Env } from "./env";
 
 const app = new Hono<Env>();
 
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Robots-Tag", "noindex, nofollow");
+});
+
+// Before the session and the SPA fallback, which would answer with the HTML shell.
+app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n", 200, { "Cache-Control": "public, max-age=86400" }));
+
 app.use("*", sessionMiddleware);
 
 app.route("/auth", auth);
@@ -94,7 +102,7 @@ app.get("/api/now", requireSession, async (c) => {
 
 app.get("/api/limits", requireSession, async (c) => {
   try {
-    return c.json(await fetchLimitsSummary(c.env.LIMITS_URL));
+    return c.json({ ...(await fetchLimitsSummary(c.env.LIMITS_URL)), timezone: c.env.TIMEZONE });
   } catch (e) {
     if (e instanceof LimitsUnavailable) return c.json({ error: e.message }, 502);
     throw e;

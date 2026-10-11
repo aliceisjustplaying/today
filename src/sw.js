@@ -54,7 +54,7 @@ self.addEventListener("fetch", (event) => {
     event.waitUntil(caches.delete(RUNTIME));
     return;
   }
-  if (request.method !== "GET" || url.pathname.startsWith("/auth/")) return;
+  if (request.method !== "GET" || url.pathname.startsWith("/auth/") || url.pathname === "/robots.txt") return;
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirst(request));

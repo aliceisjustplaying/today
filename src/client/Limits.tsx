@@ -78,6 +78,7 @@ export function Limits() {
   }
 
   const now = Date.now();
+  const tz = summary.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const balances = summary.accounts.filter(isBalanceOnly);
   const cards = sortByUrgency(summary.accounts.filter((a) => !isBalanceOnly(a)));
   const sortedBalances = sortByUrgency(balances);
@@ -85,7 +86,7 @@ export function Limits() {
     <div className="limits">
       {error && (
         <p className="limits-stale" role="status">
-          Showing data from {new Date(summary.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}. {p.text(error)}
+          Showing data from {new Date(summary.generatedAt).toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" })}. {p.text(error)}
         </p>
       )}
       {summary.errors?.map((e) => (
@@ -95,15 +96,15 @@ export function Limits() {
       ))}
       {summary.accounts.length === 0 && <p className="tabs-empty">No accounts configured in limits.</p>}
       {cards.map((a, i) => (
-        <AccountCard key={a.id} account={a} position={i} now={now} />
+        <AccountCard key={a.id} account={a} position={i} now={now} tz={tz} />
       ))}
-      {balances.length > 0 && <Balances accounts={sortedBalances} firstPosition={cards.length} onChanged={load} />}
+      {balances.length > 0 && <Balances accounts={sortedBalances} firstPosition={cards.length} onChanged={load} tz={tz} />}
     </div>
   );
 }
 
 /** `position` is the account's place in display order; privacy mode numbers decoy emails by it. */
-function AccountCard({ account: a, position, now }: { account: LimitsAccount; position: number; now: number }) {
+function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount; position: number; now: number; tz: string }) {
   const p = usePrivacy();
   const spend = spendLines(a);
   return (
@@ -116,7 +117,7 @@ function AccountCard({ account: a, position, now }: { account: LimitsAccount; po
           <UsageLink provider={a.provider} label={a.label}>
             <h2 className="limits-name">{a.label}</h2>
           </UsageLink>
-          <PlanChip account={a} />
+          <PlanChip account={a} tz={tz} />
           {a.status === "ok" || a.status === "pending" ? (
             <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
           ) : (
@@ -133,7 +134,7 @@ function AccountCard({ account: a, position, now }: { account: LimitsAccount; po
       {a.windows.length > 0 && (
         <ul className="limits-windows">
           {a.windows.map((w) => (
-            <WindowRow key={w.window} w={w} now={now} />
+            <WindowRow key={w.window} w={w} now={now} tz={tz} />
           ))}
         </ul>
       )}
@@ -167,9 +168,9 @@ function UsageLink({ provider, label, logo, children }: { provider: string; labe
   );
 }
 
-function PlanChip({ account }: { account: LimitsAccount }) {
+function PlanChip({ account, tz }: { account: LimitsAccount; tz: string }) {
   const p = usePrivacy();
-  const chip = planChip(account);
+  const chip = planChip(account, tz);
   return chip ? <span className="limits-plan">{p.on ? decoyPlanDate(chip, account.id) : chip}</span> : null;
 }
 
@@ -234,7 +235,7 @@ function BalanceEdit({ account: a, onDone }: { account: LimitsAccount; onDone: (
   );
 }
 
-function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
+function WindowRow({ w, now, tz }: { w: LimitsWindow; now: number; tz: string }) {
   const pct = clampPercent(w.usedPercent);
   return (
     <li className="limits-window" data-tone={windowTone(w)}>
@@ -250,7 +251,7 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
         <i style={{ width: `${pct ?? 0}%` }} />
       </div>
       <span className="limits-window-pct num">{pct == null ? "?" : `${Math.round(pct)}%`}</span>
-      <span className="limits-window-reset num" title={resetTitle(w, now)}>
+      <span className="limits-window-reset num" title={resetTitle(w, now, tz)}>
         {resetLabel(w, now)}
       </span>
     </li>
@@ -261,10 +262,12 @@ function Balances({
   accounts,
   firstPosition,
   onChanged,
+  tz,
 }: {
   accounts: LimitsAccount[];
   firstPosition: number;
   onChanged: () => Promise<void>;
+  tz: string;
 }) {
   const p = usePrivacy();
   const [editing, setEditing] = useState<string | null>(null);
@@ -284,7 +287,7 @@ function Balances({
                 <UsageLink provider={a.provider} label={a.label}>
                   <span className="limits-balance-name">{a.label}</span>
                 </UsageLink>
-                <PlanChip account={a} />
+                <PlanChip account={a} tz={tz} />
               </span>
               {editing === a.id ? (
                 <BalanceEdit

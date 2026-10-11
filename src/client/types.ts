@@ -155,6 +155,8 @@ export type LimitsAccount = {
 
 export type LimitsSummary = {
   generatedAt: number;
+  /** today's TIMEZONE, added by the /api/limits proxy; reset times and plan dates are shown in it. */
+  timezone?: string;
   accounts: LimitsAccount[];
   errors?: { providers: string[]; message: string }[];
 };

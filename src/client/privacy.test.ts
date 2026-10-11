@@ -8,9 +8,9 @@ describe("privacy decoys", () => {
     const short = on.decoy("title", "evt-42", "Gym");
     expect(on.decoy("title", "evt-42", "Dinner with my sister at the place on Leather Lane")).toBe(short);
     expect(on.decoy("title", "evt-42", "")).toBe(short);
-    expect(on.email(0, "hi@belovedsarah.com")).toBe(on.email(0, "a.very.long.address@another-domain.co.uk"));
+    expect(on.email(0, "hi@example.org")).toBe(on.email(0, "a.very.long.address@another-domain.co.uk"));
     expect(privacyFor(false).decoy("title", "evt-42", "Gym")).toBe("Gym");
-    expect(privacyFor(false).email(0, "hi@belovedsarah.com")).toBe("hi@belovedsarah.com");
+    expect(privacyFor(false).email(0, "hi@example.org")).toBe("hi@example.org");
     for (const kind of Object.keys(DECOYS) as (keyof typeof DECOYS)[]) {
       const first = decoy(kind, "issue-uuid-1");
       expect(decoy(kind, "issue-uuid-1")).toBe(first);
@@ -62,7 +62,7 @@ describe("privacy decoys", () => {
 
   test("inline text keeps percentages and times and swaps emails", () => {
     expect(maskInline("94% · in 2h 12m · resets 15:10")).toBe("94% · in 2h 12m · resets 15:10");
-    expect(maskInline("token for hi@belovedsarah.com expired")).toBe("token for alice@example.com expired");
+    expect(maskInline("token for hi@example.org expired")).toBe("token for alice@example.com expired");
   });
 
   test("plan chips keep the plan and swap the date", () => {

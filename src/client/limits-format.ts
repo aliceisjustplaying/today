@@ -1,6 +1,5 @@
 import type { LimitsAccount, LimitsWindow } from "./types";
 
-const TIMEZONE = "Europe/London";
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
@@ -27,22 +26,22 @@ export function formatDuration(ms: number): string {
   return `${Math.round(minutes / (24 * 60))}d`;
 }
 
-function londonDay(ms: number): string {
-  return new Date(ms).toLocaleDateString("en-CA", { timeZone: TIMEZONE });
+function dayIn(ms: number, timeZone: string): string {
+  return new Date(ms).toLocaleDateString("en-CA", { timeZone });
 }
 
-/** Wall-clock time in Europe/London: "16:40" today, "Wed 09:00" this week, "21 Oct 09:00" beyond. */
-export function formatLondonTime(at: number, now: number): string {
+/** Wall-clock time in `timeZone`: "16:40" today, "Wed 09:00" this week, "21 Oct 09:00" beyond. */
+export function formatWallTime(at: number, now: number, timeZone: string): string {
   const time = new Date(at).toLocaleTimeString("en-GB", {
-    timeZone: TIMEZONE,
+    timeZone,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
-  if (londonDay(at) === londonDay(now)) return time;
+  if (dayIn(at, timeZone) === dayIn(now, timeZone)) return time;
   const day = new Date(at).toLocaleDateString(
     "en-GB",
-    at - now < 6 * DAY ? { timeZone: TIMEZONE, weekday: "short" } : { timeZone: TIMEZONE, day: "numeric", month: "short" },
+    at - now < 6 * DAY ? { timeZone, weekday: "short" } : { timeZone, day: "numeric", month: "short" },
   );
   return `${day} ${time}`;
 }
@@ -54,10 +53,10 @@ export function resetLabel(w: LimitsWindow, now: number): string | null {
   return `in ${formatDuration(w.resetsAt - now)}`;
 }
 
-/** The full reset time for the row's tooltip: "resets Thu 03:47 London time". */
-export function resetTitle(w: LimitsWindow, now: number): string | undefined {
+/** The full reset time for the row's tooltip: "resets Thu 03:47". */
+export function resetTitle(w: LimitsWindow, now: number, timeZone: string): string | undefined {
   if (w.resetsAt == null || w.resetsAt <= now) return undefined;
-  return `resets ${formatLondonTime(w.resetsAt, now)} London time`;
+  return `resets ${formatWallTime(w.resetsAt, now, timeZone)}`;
 }
 
 export function money(n: number): string {
@@ -175,7 +174,7 @@ export function statusLabel(a: LimitsAccount): string {
  * The plan chip beside the name: "Max 20x", "Go inactive", "Lite · renews Oct 16", or "Lite · ends Oct 16" once canceled. Null when unknown or
  * when it would only repeat the name; an inactive card's pill already says the plan lapsed.
  */
-export function planChip(a: LimitsAccount): string | null {
+export function planChip(a: LimitsAccount, timeZone: string): string | null {
   const plan = a.plan;
   // The OpenCode console's plan is the Go subscription, which has its own card; Zen is credits.
   if (!plan || a.provider === "opencode") return null;
@@ -185,5 +184,5 @@ export function planChip(a: LimitsAccount): string | null {
   if (plan.renewsAt == null) return name;
   // A canceled plan stays active until its period ends, so the date is when it ends, not a renewal.
   const verb = plan.canceledAt != null ? "ends" : "renews";
-  return `${name} · ${verb} ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone: TIMEZONE, month: "short", day: "numeric" })}`;
+  return `${name} · ${verb} ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone, month: "short", day: "numeric" })}`;
 }

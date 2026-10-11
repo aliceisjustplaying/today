@@ -1,6 +1,6 @@
 export class LimitsUnavailable extends Error {}
 
-export async function fetchLimitsSummary(baseUrl: string, timeoutMs = 5_000): Promise<unknown> {
+export async function fetchLimitsSummary(baseUrl: string, timeoutMs = 5_000): Promise<Record<string, unknown>> {
   const url = new URL("/api/summary", baseUrl);
   let res: Response;
   try {
@@ -11,7 +11,7 @@ export async function fetchLimitsSummary(baseUrl: string, timeoutMs = 5_000): Pr
   if (!res.ok) throw new LimitsUnavailable(`limits ${res.status}`);
   const body = (await res.json().catch(() => null)) as { accounts?: unknown } | null;
   if (!body || !Array.isArray(body.accounts)) throw new LimitsUnavailable("limits returned an unexpected response");
-  return body;
+  return body as Record<string, unknown>;
 }
 
 /** Stores a Capy balance anchor in limits; returns limits' status and body (`{ account }` or `{ error }`). */

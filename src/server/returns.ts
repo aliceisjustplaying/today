@@ -31,9 +31,9 @@ export function getReturns(opts: {
   apiKeys: string[];
   label: string;
   now?: Date;
-  timezone?: string;
+  timezone: string;
 }): Promise<ReturnsResponse> {
-  const todayKey = todayKeyInTz(opts.timezone ?? "Europe/London", opts.now);
+  const todayKey = todayKeyInTz(opts.timezone, opts.now);
   return listIssuesByLabel(opts.apiKeys, opts.label).then((tasks) => {
     const items = tasks
       .map((task): ReturnItem => {
