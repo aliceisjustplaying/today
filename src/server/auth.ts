@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { googleAuth } from "@hono/oauth-providers/google";
 import { and, eq } from "drizzle-orm";
-import { db } from "./db";
 import { oauthTokens } from "./db/schema";
 import { createSession, destroySession } from "./session";
 import type { Env } from "./env";
@@ -11,7 +10,9 @@ const auth = new Hono<Env>();
 auth.get("/google/start", (c) => c.redirect("/auth/google/callback"));
 
 auth.use("/google/callback", async (c, next) => {
-  const redirect_uri = new URL("/auth/google/callback", c.req.url).toString();
+  const redirect_uri =
+    c.env.GOOGLE_OAUTH_REDIRECT_URI ??
+    new URL("/auth/google/callback", c.req.url).toString();
   const handler = googleAuth({
     client_id: c.env.GOOGLE_OAUTH_CLIENT_ID,
     client_secret: c.env.GOOGLE_OAUTH_CLIENT_SECRET,
@@ -47,13 +48,13 @@ auth.get("/google/callback", async (c) => {
     ? new Date(now.getTime() + token.expires_in * 1000)
     : null;
 
-  await db(c.env.DB)
+  await c.env.db
     .delete(oauthTokens)
     .where(
       and(eq(oauthTokens.provider, "google"), eq(oauthTokens.userSub, user.id)),
     );
 
-  await db(c.env.DB).insert(oauthTokens).values({
+  await c.env.db.insert(oauthTokens).values({
     provider: "google",
     userSub: user.id,
     accessToken: token.token,

@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "./db";
 import { oauthTokens } from "./db/schema";
-import type { Env } from "./env";
+import type { AppEnv } from "./env";
 
 type RefreshResponse = {
   access_token: string;
@@ -17,8 +16,8 @@ export class GoogleReauthNeeded extends Error {
   }
 }
 
-async function loadTokenRow(env: Cloudflare.Env, userSub: string) {
-  const rows = await db(env.DB)
+async function loadTokenRow(env: AppEnv, userSub: string) {
+  const rows = await env.db
     .select()
     .from(oauthTokens)
     .where(
@@ -29,7 +28,7 @@ async function loadTokenRow(env: Cloudflare.Env, userSub: string) {
 }
 
 async function refreshAccessToken(
-  env: Cloudflare.Env,
+  env: AppEnv,
   refreshToken: string,
   userSub: string,
 ): Promise<string> {
@@ -58,7 +57,7 @@ async function refreshAccessToken(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + data.expires_in * 1000);
 
-  await db(env.DB)
+  await env.db
     .update(oauthTokens)
     .set({
       accessToken: data.access_token,
@@ -73,7 +72,7 @@ async function refreshAccessToken(
 }
 
 export async function getValidGoogleAccessToken(
-  env: Cloudflare.Env,
+  env: AppEnv,
   userSub: string,
 ): Promise<string> {
   const row = await loadTokenRow(env, userSub);
@@ -122,7 +121,6 @@ export async function listCalendarEvents(
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
-    cf: { cacheTtl: 30, cacheEverything: true },
   });
 
   if (res.status === 401) throw new GoogleReauthNeeded("calendar 401");
@@ -153,7 +151,6 @@ export async function listCalendars(accessToken: string): Promise<CalendarListIt
     "https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader",
     {
       headers: { Authorization: `Bearer ${accessToken}` },
-      cf: { cacheTtl: 600, cacheEverything: true },
     },
   );
   if (res.status === 401) throw new GoogleReauthNeeded("calendarList 401");
