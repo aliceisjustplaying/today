@@ -2,6 +2,8 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import type { LimitsAccount, LimitsSummary, LimitsWindow } from "./types";
 import { getCached, setCached } from "./cache";
 import { ProviderLogo } from "./logos";
+import { onResume, signInAgain } from "./resume";
+import { reloadIfStale, supersededByDeploy } from "./updates";
 import {
   ageLabel,
   balanceRow,
@@ -27,11 +29,12 @@ export function Limits() {
     try {
       const r = await fetch("/api/limits");
       if (r.status === 401) {
-        window.location.href = "/auth/google/start";
+        signInAgain();
         return;
       }
       const body = (await r.json().catch(() => null)) as (LimitsSummary & { error?: string }) | null;
       if (!r.ok || !body) throw new Error(body?.error ?? `limits ${r.status}`);
+      if (await supersededByDeploy()) return;
       setSummary(body);
       setCached("limits", body);
       setError(null);
@@ -43,12 +46,16 @@ export function Limits() {
   }, []);
 
   useEffect(() => {
+    const refresh = () => {
+      reloadIfStale();
+      load();
+    };
     load();
-    const interval = window.setInterval(load, 60_000);
-    window.addEventListener("focus", load);
+    const interval = window.setInterval(refresh, 60_000);
+    const stopResume = onResume(refresh);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("focus", load);
+      stopResume();
     };
   }, [load]);
 

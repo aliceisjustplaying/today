@@ -32,3 +32,6 @@ data
 # IDE / OS
 .idea
 .DS_Store
+e2e/.builds
+test-results
+playwright-report

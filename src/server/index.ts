@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import auth from "./auth";
+import client from "./static";
 import { sessionMiddleware, requireSession } from "./session";
 import { todayKeyInTz, addDaysToKey } from "./dates";
 import {
@@ -155,9 +155,6 @@ app.get("/api/prep/history", requireSession, async (c) =>
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
-app.use("*", (c, next) => serveStatic({ root: c.env.STATIC_DIR })(c, next));
-app.get("*", (c, next) =>
-  serveStatic({ root: c.env.STATIC_DIR, path: "index.html" })(c, next),
-);
+app.route("/", client);
 
 export default app;
