@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import auth from "./auth";
 import { sessionMiddleware, requireSession } from "./session";
-import { bucketTasks, completeTask, listAllTasks } from "./google-tasks";
 import { todayKeyInTz, addDaysToKey } from "./dates";
 import {
   getValidGoogleAccessToken,
@@ -12,6 +11,7 @@ import {
 } from "./google";
 import { computeNowState, updateBodyState } from "./now";
 import { getReturns } from "./returns";
+import { bucketTasks, completeIssue, LinearError, listAssignedIssues } from "./linear";
 import type { Env } from "./env";
 
 const app = new Hono<Env>();
@@ -28,18 +28,14 @@ app.get("/api/me", requireSession, (c) => {
 });
 
 app.get("/api/tasks", requireSession, async (c) => {
-  const s = c.get("session")!;
   try {
-    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
-    const tasks = await listAllTasks(accessToken);
+    const tasks = await listAssignedIssues(c.env.LINEAR_API_KEYS);
     const today = todayKeyInTz(c.env.TIMEZONE);
     const sevenDay = addDaysToKey(today, 7);
     const buckets = bucketTasks(tasks, today, sevenDay);
     return c.json({ ...buckets, todayKey: today });
   } catch (e) {
-    if (e instanceof GoogleReauthNeeded) {
-      return c.json({ error: "google_reauth_needed" }, 401);
-    }
+    if (e instanceof LinearError) return c.json({ error: e.message }, 502);
     throw e;
   }
 });
@@ -67,19 +63,16 @@ app.get("/api/events", requireSession, async (c) => {
 });
 
 app.get("/api/returns", requireSession, async (c) => {
-  const s = c.get("session")!;
   try {
-    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
     return c.json(
       await getReturns({
-        accessToken,
+        apiKeys: c.env.LINEAR_API_KEYS,
+        label: c.env.LINEAR_RETURNS_LABEL,
         timezone: c.env.TIMEZONE,
       }),
     );
   } catch (e) {
-    if (e instanceof GoogleReauthNeeded) {
-      return c.json({ error: "google_reauth_needed" }, 401);
-    }
+    if (e instanceof LinearError) return c.json({ error: e.message }, 502);
     throw e;
   }
 });
@@ -97,19 +90,15 @@ app.get("/api/now", requireSession, async (c) => {
   }
 });
 
-app.post("/api/tasks/:taskListId/:id/close", requireSession, async (c) => {
-  const s = c.get("session")!;
-  const taskListId = c.req.param("taskListId");
+app.post("/api/tasks/:workspace/:id/close", requireSession, async (c) => {
   const id = c.req.param("id");
-  if (!taskListId || !id) return c.json({ error: "missing_id" }, 400);
+  const apiKey = c.env.LINEAR_API_KEYS[Number(c.req.param("workspace"))];
+  if (!apiKey) return c.json({ error: "unknown_workspace" }, 400);
   try {
-    const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
-    await completeTask(accessToken, taskListId, id);
+    await completeIssue(apiKey, id);
+    console.log(`completed Linear issue ${id} (workspace ${c.req.param("workspace")})`);
     return c.json({ ok: true });
   } catch (e) {
-    if (e instanceof GoogleReauthNeeded) {
-      return c.json({ error: "google_reauth_needed" }, 401);
-    }
     return c.json({ error: String(e) }, 502);
   }
 });

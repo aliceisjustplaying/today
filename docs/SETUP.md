@@ -11,21 +11,19 @@ Steps inside each section are intentionally unnumbered (they may change order).
 - today runs as a Bun process (`bun run start`) behind a TLS reverse proxy. The production host is the NixOS VPS; its package, systemd unit and Caddy vhost live in the nixfiles repo.
 - Pick the public hostname and point a DNS A record at the host before the first deploy, so the proxy can get a certificate.
 
-## Google Cloud (Calendar + Tasks + Routes)
+## Google Cloud (Calendar + Routes)
 
 This is the longest section. All in https://console.cloud.google.com.
 
 - Create (or reuse) a Google Cloud project.
 - **Enable APIs** in the project (APIs & Services → Library):
   - **Google Calendar API**
-  - **Google Tasks API**
   - **Routes API** (this is the modern replacement for the legacy Distance Matrix API — same use case, current SKU)
 - **OAuth consent screen** (APIs & Services → OAuth consent screen):
   - User type: **External**
   - App name: `Today`
   - User support email + developer contact email: your email
   - Add scope: `https://www.googleapis.com/auth/calendar.readonly`
-  - Add scope: `https://www.googleapis.com/auth/tasks`
   - Add the same account you will put in `ALLOWED_EMAIL` as a test user.
   - You can leave it in "Testing" status — no need to publish, since you're the only user. Refresh tokens issued in Testing mode expire after 7 days, which is fine; we'll handle re-auth gracefully.
 - **OAuth 2.0 Client ID** (APIs & Services → Credentials → Create credentials → OAuth client ID):
@@ -41,11 +39,13 @@ This is the longest section. All in https://console.cloud.google.com.
   - Save and copy the **API key**.
 - **Billing**: Google Cloud requires a billing account on the project for Routes API even though there's a $200/month free credit. Attach a card. Set a budget alert at $5/month so you get a warning long before anything real happens.
 
-## Google Tasks
+## Linear
 
-- Create a task list named **Returns** if you want the app's Returns section.
-- Put return tasks in that list. Their Google Tasks due dates control urgency and ordering.
-- Existing users must sign in again after deployment to grant the new Tasks permission.
+- Create a **personal API key**: Linear → Settings → Security & access → Personal API keys. Give it read and write access to the teams that hold your todos. Set it as `LINEAR_API_KEY`; the app sends it as the raw `Authorization` header.
+- **Several workspaces:** a personal key belongs to one workspace. Create one key per workspace and list them in `LINEAR_API_KEYS` (separated by newlines, spaces or commas; `LINEAR_API_KEY` is also included if set). Issues from every workspace are merged, and completing one uses the key of the workspace it came from.
+- Today and Upcoming show open issues assigned to you with a due date. Completing one moves it to its team's first "completed" workflow state.
+- For the Returns section, create a label named **Returns** in each workspace that holds returns (or set `LINEAR_RETURNS_LABEL` to another name) and put it on return issues. They need not be assigned to you; their due dates control urgency and ordering.
+- The Google Tasks scope is no longer requested. The Google Tasks API can be disabled in the Cloud project.
 
 ## (Optional now, required later) Apple developer for iOS PWA install
 
@@ -69,5 +69,7 @@ Put these in `.env` locally, or in the server's environment / credentials in pro
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `SESSION_SECRET`
+- `LINEAR_API_KEY`, or `LINEAR_API_KEYS` for several workspaces
+- `LINEAR_RETURNS_LABEL` (optional, default `Returns`)
 - `GOOGLE_OAUTH_REDIRECT_URI` (production)
 - `GOOGLE_API_KEY` and `HOME_ADDRESS` (travel estimates)

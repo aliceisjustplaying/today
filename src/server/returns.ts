@@ -1,5 +1,5 @@
 import { todayKeyInTz } from "./dates";
-import { listTasksByListTitle, type Task } from "./google-tasks";
+import { listIssuesByLabel, type Task } from "./linear";
 
 export type ReturnUrgency = "overdue" | "due_today" | "due_soon" | "scheduled" | "no_date";
 
@@ -28,12 +28,13 @@ function urgencyFor(daysUntilDue: number | null): ReturnUrgency {
 }
 
 export function getReturns(opts: {
-  accessToken: string;
+  apiKeys: string[];
+  label: string;
   now?: Date;
   timezone?: string;
 }): Promise<ReturnsResponse> {
   const todayKey = todayKeyInTz(opts.timezone ?? "Europe/London", opts.now);
-  return listTasksByListTitle(opts.accessToken, "Returns").then((tasks) => {
+  return listIssuesByLabel(opts.apiKeys, opts.label).then((tasks) => {
     const items = tasks
       .map((task): ReturnItem => {
         const dueKey = task.due?.date.slice(0, 10);

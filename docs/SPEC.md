@@ -1,6 +1,6 @@
 # Personal Control Panel — Spec
 
-`today` is a personal **Now layer** above Google Tasks and Google Calendar. It answers the short-horizon question those tools do not answer together:
+`today` is a personal **Now layer** above Linear and Google Calendar. It answers the short-horizon question those tools do not answer together:
 
 > Given the next real anchor event, current body/admin state, and travel/prep time, what is the next sane action?
 
@@ -8,13 +8,13 @@ It is not a general todo app, calendar app, or life dashboard. The default view 
 
 ## Current v0
 
-Opening the deployed app in the morning should be more useful in ten seconds than opening Google Tasks + Calendar and doing the time math by hand.
+Opening the deployed app in the morning should be more useful in ten seconds than opening Linear + Calendar and doing the time math by hand.
 
 The current app includes:
 
 - Google sign-in with a single allowlisted email.
 - Google Calendar read access for today and tomorrow.
-- Google Tasks read and completion access through the existing Google OAuth flow.
+- Linear issues assigned to you, read and completed through personal Linear API keys, one per workspace, merged into one view.
 - A Now panel centered on the next calendar anchor.
 - Body/prep state stored in SQLite and used to calculate prep time.
 - Google Routes travel estimates from a configured home address to the next anchor location.
@@ -26,7 +26,7 @@ Not shipped yet:
 
 - Candidate capture.
 - Brain-dump extraction.
-- Candidate approval into Google Tasks.
+- Candidate approval into Linear.
 - YNAB integration.
 - Email or messaging ingestion.
 - Notifications.
@@ -35,8 +35,9 @@ Not shipped yet:
 
 | Thing                                | Source / owner                                      |
 | ------------------------------------ | --------------------------------------------------- |
-| Durable tasks                        | Google Tasks                                        |
-| Task completion                      | Google Tasks API                                    |
+| Durable tasks                        | Linear (issues assigned to you)                     |
+| Task completion                      | Linear GraphQL `issueUpdate` → team's completed state |
+| Returns                              | Linear issues carrying the `Returns` label          |
 | Hard time commitments                | Google Calendar                                     |
 | Travel time                          | Google Routes API                                   |
 | "What am I doing now / what's next?" | This app                                            |
@@ -79,15 +80,15 @@ The Calendar section lists today's events and optionally expands tomorrow's even
 
 ### Today
 
-The Today section lists Google Tasks that are overdue or due today across all task lists. Tasks can be completed from the app and opened in Google Tasks.
+The Today section lists open Linear issues assigned to you (any state except completed or canceled) that are overdue or due today, across all teams. Each shows its project, or team key when it has no project. Issues can be completed from the app, which moves them to the team's first completed state using the key of the issue's workspace (`:workspace` is its index in the configured key list), and opened in Linear.
 
 ### Upcoming
 
-The Upcoming section lists Google Tasks due in the next seven days, grouped by due date. Tasks can be completed from the app and opened in Google Tasks.
+The Upcoming section lists the same assigned issues due in the next seven days, grouped by due date. Issues can be completed from the app and opened in Linear.
 
 ### Returns
 
-The Returns section lists incomplete tasks from the Google Tasks list named `Returns`. Due dates determine urgency and tasks without dates remain visible at the end of the section.
+The Returns section lists open Linear issues carrying the label named by `LINEAR_RETURNS_LABEL` (default `Returns`, case-insensitive), whoever they are assigned to. It is merged across all configured workspaces. Due dates determine urgency and issues without dates remain visible at the end of the section.
 
 ## Runtime Behavior
 
@@ -100,8 +101,9 @@ GET  /api/ping
 GET  /api/me
 GET  /api/tasks
 GET  /api/events
+GET  /api/returns
 GET  /api/now
-POST /api/tasks/:taskListId/:id/close
+POST /api/tasks/:workspace/:id/close
 POST /api/body-state
 ```
 
@@ -126,12 +128,14 @@ ALLOWED_EMAIL
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
 SESSION_SECRET
+LINEAR_API_KEY or LINEAR_API_KEYS
 ```
 
 Optional:
 
 ```txt
 GOOGLE_OAUTH_REDIRECT_URI
+LINEAR_RETURNS_LABEL
 GOOGLE_API_KEY
 HOME_ADDRESS
 TIMEZONE
@@ -210,8 +214,8 @@ SQLite tables:
 
 - Show Now / Today first, not the whole backlog.
 - Do not create manual fixture data for production behavior.
-- Google Tasks remains the durable task source.
-- Prep/body state stays app-local and does not become Google Tasks.
+- Linear remains the durable task source.
+- Prep/body state stays app-local and does not become Linear issues.
 - Google Calendar remains the source of hard time commitments.
 - Do not moralize about money or travel tradeoffs in UI copy.
 - AI can suggest, but the app records explicit user-approved actions.
@@ -219,7 +223,7 @@ SQLite tables:
 ## Future Work
 
 - Candidate capture: brain dump → structured candidates.
-- Candidate approval: approved todo candidates write to Google Tasks.
+- Candidate approval: approved todo candidates write to Linear (`issueCreate`).
 - Email and message scans for possible reply obligations.
 - YNAB read-only context.
 - Push notifications for event-imminent and must-not-rot cases.

@@ -47,12 +47,13 @@ export type NowState = {
 
 export type Task = {
   id: string;
-  taskListId: string;
-  taskListTitle: string;
+  workspace: number;
+  identifier: string;
   content: string;
   description: string;
   due: { date: string } | null;
-  webViewLink?: string;
+  context: string;
+  url: string;
 };
 
 export type TasksResponse = {

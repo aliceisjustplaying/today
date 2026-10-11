@@ -1,7 +1,6 @@
 import type { ReturnItem, ReturnsResponse } from "./types";
 import { formatDateShort } from "./format";
 import { OpenIcon } from "./icons";
-import { googleTasksUrl } from "./urls";
 
 function dueLabel(item: ReturnItem): string {
   const fallback = item.due?.date.slice(0, 10);
@@ -34,17 +33,17 @@ function ReturnRow({ item }: { item: ReturnItem }) {
     <li className="return-item" data-urgency={item.urgency}>
       <div className="return-body">
         <div className="return-head">
-          <span className="return-merchant">Google Tasks</span>
+          <span className="return-merchant">{item.identifier}</span>
           <span className="return-due">{dueLabel(item)}</span>
         </div>
         <div className="return-title">{item.content}</div>
-        <div className="return-meta">{item.taskListTitle}</div>
+        <div className="return-meta">{item.context}</div>
         {item.description && <div className="return-action">{item.description}</div>}
       </div>
       <a
         className="row-open"
-        href={item.webViewLink ?? googleTasksUrl}
-        aria-label="open return task in Google Tasks"
+        href={item.url}
+        aria-label={`open ${item.identifier} in Linear`}
       >
         <OpenIcon />
       </a>

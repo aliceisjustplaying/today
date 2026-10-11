@@ -1,7 +1,7 @@
 {
   "name": "today",
   "short_name": "today",
-  "description": "The Now layer above Google Tasks + Google Calendar",
+  "description": "The Now layer above Linear + Google Calendar",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

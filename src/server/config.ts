@@ -13,6 +13,8 @@ export type Config = {
   GOOGLE_API_KEY: string;
   HOME_ADDRESS: string;
   SESSION_SECRET: string;
+  LINEAR_API_KEYS: string[];
+  LINEAR_RETURNS_LABEL: string;
   TIMEZONE: string;
   TRANSPORT_DEFAULT: string;
   TRANSPORT_RESCUE: string;
@@ -29,7 +31,12 @@ type EnvSource = Record<string, string | undefined>;
 export function loadConfig(env: EnvSource = process.env): Config {
   const value = (key: string) => env[key]?.trim() || undefined;
 
-  const missing = REQUIRED.filter((key) => !value(key));
+  const linearApiKeys = [value("LINEAR_API_KEY"), ...(value("LINEAR_API_KEYS") ?? "").split(/[\s,]+/)]
+    .filter((key): key is string => Boolean(key))
+    .filter((key, i, all) => all.indexOf(key) === i);
+
+  const missing: string[] = REQUIRED.filter((key) => !value(key));
+  if (linearApiKeys.length === 0) missing.push("LINEAR_API_KEY or LINEAR_API_KEYS");
   if (missing.length > 0) {
     throw new Error(`Missing required env: ${missing.join(", ")}`);
   }
@@ -42,6 +49,8 @@ export function loadConfig(env: EnvSource = process.env): Config {
     GOOGLE_API_KEY: value("GOOGLE_API_KEY") ?? "",
     HOME_ADDRESS: value("HOME_ADDRESS") ?? "",
     SESSION_SECRET: value("SESSION_SECRET")!,
+    LINEAR_API_KEYS: linearApiKeys,
+    LINEAR_RETURNS_LABEL: value("LINEAR_RETURNS_LABEL") ?? "Returns",
     TIMEZONE: value("TIMEZONE") ?? "Europe/London",
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",
