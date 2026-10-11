@@ -12,7 +12,7 @@ import {
 import { computeNowState } from "./now";
 import { getPrepHistory, getPrepToday, parseStepInputs, PrepInputError, saveSteps, updatePrepToday } from "./prep";
 import { getReturns } from "./returns";
-import { fetchLimitsSummary, LimitsUnavailable } from "./limits";
+import { fetchLimitsSummary, LimitsUnavailable, postLimitsBalance } from "./limits";
 import { completeIssue, LinearError, listAssignedIssues, tabTasks } from "./linear";
 import type { Env } from "./env";
 
@@ -95,6 +95,18 @@ app.get("/api/now", requireSession, async (c) => {
 app.get("/api/limits", requireSession, async (c) => {
   try {
     return c.json(await fetchLimitsSummary(c.env.LIMITS_URL));
+  } catch (e) {
+    if (e instanceof LimitsUnavailable) return c.json({ error: e.message }, 502);
+    throw e;
+  }
+});
+
+app.post("/api/limits/accounts/:id/balance", requireSession, async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { balanceUsd?: unknown } | null;
+  if (typeof body?.balanceUsd !== "number") return c.json({ error: "balanceUsd must be a number" }, 400);
+  try {
+    const r = await postLimitsBalance(c.env.LIMITS_URL, c.req.param("id"), body.balanceUsd);
+    return Response.json(r.body, { status: r.status });
   } catch (e) {
     if (e instanceof LimitsUnavailable) return c.json({ error: e.message }, 502);
     throw e;

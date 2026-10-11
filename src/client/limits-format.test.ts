@@ -4,7 +4,9 @@ import {
   balanceRow,
   formatDuration,
   formatLondonTime,
+  cardNotice,
   isBalanceOnly,
+  parseDollars,
   projectionLabel,
   resetLabel,
   resetTitle,
@@ -72,21 +74,23 @@ describe("limits formatting", () => {
     expect(spendLines({} as LimitsAccount)).toEqual([]);
   });
 
-  test("inactive is a neutral renew pill, other statuses pass through", () => {
+  test("inactive is a plain pill with no message line; other statuses pass through", () => {
     const account = (status: LimitsAccount["status"]): LimitsAccount => ({
       id: "opencode-go:main",
       provider: "opencode-go",
       label: "Go",
       status,
       error: null,
-      notice: status === "inactive" ? "Go subscription inactive, renew to use" : null,
+      notice: status === "error" ? null : `Go ${status}`,
       lastAttemptAt: now,
       observedAt: null,
       windows: [],
     });
-    expect(statusLabel(account("inactive"))).toBe("inactive · renew");
+    expect(statusLabel(account("inactive"))).toBe("inactive");
     expect(statusLabel(account("ok"))).toBe("ok");
     expect(statusLabel(account("error"))).toBe("error");
+    expect(cardNotice(account("inactive"))).toBeNull();
+    expect(cardNotice(account("ok"))).toBe("Go ok");
   });
 
   const acct = (over: Partial<LimitsAccount>): LimitsAccount => ({
@@ -117,6 +121,7 @@ describe("limits formatting", () => {
     expect(isBalanceOnly(acct({}))).toBe(false);
 
     expect(balanceRow(zen)).toEqual({ amount: "$4.20", detail: null });
+    expect(balanceRow(acct({ balanceUsd: { balance: 0, burn: null } }))).toEqual({ amount: "$0.00", detail: null, tone: "out" });
     expect(balanceRow(acct({ balanceUsd: { balance: 17.84, burn: { perDay: 0.62, daysLeft: 28.8 } } }))).toEqual({
       amount: "$17.84",
       detail: "$0.62/day · ~29 days left",
@@ -126,6 +131,32 @@ describe("limits formatting", () => {
       spendUsd: { credits: 41.5, total: 241.5, periodEnd: null, projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null } },
     });
     expect(balanceRow(capy)).toEqual({ amount: "$41.50", detail: "this month · ~$128.65 by month end" });
+  });
+
+  test("Capy shows dollars left once a balance is set, and a set-balance target until then", () => {
+    const spendUsd = { credits: 41.5, total: 241.5, periodEnd: null, projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null } };
+    const capy = (over: Partial<LimitsAccount>) => acct({ provider: "capy", balanceSettable: true, spendUsd, ...over });
+    expect(balanceRow(capy({ balanceAnchor: null }))).toEqual({ amount: null, detail: "$41.50 this month · ~$128.65 by month end" });
+    const left = (balance: number, daysLeft: number) =>
+      balanceRow(capy({ balanceAnchor: { balanceUsd: 100, asOf: 0 }, balanceUsd: { balance, burn: { perDay: 4.15, daysLeft } } }));
+    expect(left(58.5, 14.1)).toEqual({
+      amount: "$58.50 left",
+      detail: "$41.50 this month · ~14 days left at $4.15/day",
+      tone: undefined,
+      title: "~$128.65 by month end",
+    });
+    expect(left(29, 7).tone).toBe("low");
+    expect(left(8.3, 2).tone).toBe("out");
+    expect(left(-3, -0.7)).toMatchObject({ amount: "$0.00 left", detail: "$41.50 this month · ~0 days left at $4.15/day", tone: "out" });
+  });
+
+  test("typed balances parse as dollars", () => {
+    expect(parseDollars("58.50")).toBe(58.5);
+    expect(parseDollars(" $1,200 ")).toBe(1200);
+    expect(parseDollars("0")).toBe(0);
+    expect(parseDollars("-5")).toBeNull();
+    expect(parseDollars("lots")).toBeNull();
+    expect(parseDollars("")).toBeNull();
   });
 
   test("cards are ordered by their most used window, inactive last", () => {
