@@ -5,8 +5,7 @@ import { Upcoming } from "./Upcoming";
 import { NoDate } from "./NoDate";
 import { Limits } from "./Limits";
 import { getCached, setCached } from "./cache";
-
-const LIMITS_TAB = "Limits";
+import { LIMITS_TAB, resolveTab } from "./tabs";
 
 type Props = {
   tasks: TasksResponse | null;
@@ -17,8 +16,9 @@ type Props = {
 export function TaskTabs({ tasks, completing, onComplete }: Props) {
   const [selected, setSelected] = useState(() => getCached<string>("tasks.tab"));
   const tabs = tasks?.tabs ?? [];
-  const showLimits = selected === LIMITS_TAB;
-  const tab = tabs.find((t) => t.name === selected) ?? tabs[0];
+  const current = resolveTab(selected, tabs.map((t) => t.name));
+  const showLimits = current === LIMITS_TAB;
+  const tab = tabs.find((t) => t.name === current);
   const select = (name: string) => {
     setSelected(name);
     setCached("tasks.tab", name);

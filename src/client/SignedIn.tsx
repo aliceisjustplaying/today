@@ -15,7 +15,7 @@ import { Returns } from "./Returns";
 import { Events } from "./Events";
 import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
-import { onResume, signInAgain } from "./resume";
+import { REFETCH_GAP_MS, onResume, signInAgain, throttle } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
 import { EyeIcon, PrivacyContext, loadPrivacy, maskInline, savePrivacy } from "./privacy";
 
@@ -101,19 +101,20 @@ export function SignedIn() {
   }, []);
 
   useEffect(() => {
-    const loadAll = () => {
-      reloadIfStale();
+    const loadData = () => {
       loadNow();
       loadTasks();
       loadEvents();
       loadReturns();
     };
-    loadAll();
-    const interval = window.setInterval(() => {
+    reloadIfStale();
+    loadData();
+    const refetch = throttle(loadData, REFETCH_GAP_MS);
+    const interval = window.setInterval(loadNow, 60_000);
+    const stopResume = onResume(() => {
       reloadIfStale();
-      loadNow();
-    }, 60_000);
-    const stopResume = onResume(loadAll);
+      refetch();
+    });
     return () => {
       window.clearInterval(interval);
       stopResume();

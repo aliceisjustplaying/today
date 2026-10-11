@@ -11,7 +11,8 @@ export function registerServiceWorker(): void {
 
 /**
  * Compares the running build with the deployed one and, when a deploy landed since this page
- * loaded, reloads into it. Resolves true when a reload is underway.
+ * loaded, reloads into it. Callers run it on open and on resume only, never on a timer, and it
+ * holds off while an edit is open. Resolves true when a reload is underway.
  */
 export function reloadIfStale(): Promise<boolean> {
   inflight ??= check().finally(() => {
@@ -42,6 +43,7 @@ async function check(): Promise<boolean> {
     sessionStorage.removeItem(ATTEMPT_KEY);
     return false;
   }
+  if (isEditing()) return false;
 
   const [attemptedBuild, attempts] = (sessionStorage.getItem(ATTEMPT_KEY) ?? "").split(":");
   const tries = attemptedBuild === latest ? Number(attempts) : 0;
@@ -56,6 +58,16 @@ async function check(): Promise<boolean> {
   reloading = true;
   window.location.reload();
   return true;
+}
+
+/**
+ * True while she's typing or has an editor open (the prep sheet, a balance form): a reload then
+ * would throw away the edit, so the update waits for the next open or resume.
+ */
+export function isEditing(): boolean {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active.matches("input, textarea, select, [contenteditable]")) return true;
+  return document.querySelector("[data-editing]") !== null;
 }
 
 async function activateLatestWorker(): Promise<void> {

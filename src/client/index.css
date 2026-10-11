@@ -1418,6 +1418,35 @@ a {
 .limits-head .provider-logo {
   grid-row: 1;
 }
+.limits-head > .limits-link--logo,
+.limits-balance > .limits-link--logo {
+  grid-row: 1;
+}
+.limits-link {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.limits-link-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--muted-soft);
+}
+.limits-link-icon svg {
+  width: 11px;
+  height: 11px;
+}
+.limits-link:hover .limits-link-icon,
+.limits-link:focus-visible .limits-link-icon {
+  color: var(--muted);
+}
+.limits-age--stale {
+  font-style: italic;
+}
 .limits-head .limits-email {
   grid-column: 2 / -1;
 }
