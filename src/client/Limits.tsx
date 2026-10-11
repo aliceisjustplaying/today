@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import type { LimitsAccount, LimitsSummary, LimitsWindow } from "./types";
 import { getCached, setCached } from "./cache";
+import { ProviderLogo } from "./logos";
 import {
+  ageLabel,
+  balanceRow,
   clampPercent,
+  isBalanceOnly,
   projectionLabel,
   resetLabel,
+  resetTitle,
+  sortByUrgency,
   spendLines,
   statusLabel,
-  updatedLabel,
   windowTone,
 } from "./limits-format";
 
@@ -69,8 +74,10 @@ export function Limits() {
   }
 
   const now = Date.now();
+  const balances = summary.accounts.filter(isBalanceOnly);
+  const cards = sortByUrgency(summary.accounts.filter((a) => !isBalanceOnly(a)));
   return (
-    <>
+    <div className="limits">
       {error && (
         <p className="limits-stale" role="status">
           Showing data from {new Date(summary.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}. {error}
@@ -82,24 +89,34 @@ export function Limits() {
         </p>
       ))}
       {summary.accounts.length === 0 && <p className="tabs-empty">No accounts configured in limits.</p>}
-      {summary.accounts.map((a) => (
+      {cards.map((a) => (
         <AccountCard key={a.id} account={a} now={now} />
       ))}
-    </>
+      {balances.length > 0 && <Balances accounts={sortByUrgency(balances)} />}
+    </div>
   );
+}
+
+function providerName(provider: string): string {
+  return PROVIDER_NAMES[provider] ?? provider;
 }
 
 function AccountCard({ account: a, now }: { account: LimitsAccount; now: number }) {
   const spend = spendLines(a);
   return (
-    <section className="section limits-card" data-status={a.status}>
+    <section className="section limits-card" data-provider={a.provider} data-status={a.status}>
       <div className="limits-head">
-        <h2 className="section-title limits-name">{a.label}</h2>
-        <span className="limits-provider">{PROVIDER_NAMES[a.provider] ?? a.provider}</span>
-      </div>
-      <div className="limits-meta">
-        <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
-        <span>{updatedLabel(a, now)}</span>
+        <ProviderLogo provider={a.provider} />
+        <h2 className="limits-name">{a.label}</h2>
+        {a.status === "ok" || a.status === "pending" ? (
+          <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
+        ) : (
+          <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
+        )}
+        <span className="limits-provider">{providerName(a.provider)}</span>
+        <span className="limits-age num" title="last updated">
+          {ageLabel(a, now)}
+        </span>
       </div>
       {a.status === "error" && a.error && <p className="limits-error">{a.error}</p>}
       {a.status !== "error" && a.notice && <p className="limits-notice">{a.notice}</p>}
@@ -110,26 +127,17 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
           ))}
         </ul>
       )}
-      {spend.length > 0 && (
-        <ul className="limits-spend">
-          {spend.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      )}
+      {spend.length > 0 && <p className="limits-spend">{spend.join(" · ")}</p>}
     </section>
   );
 }
 
 function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
   const pct = clampPercent(w.usedPercent);
-  const notes = [resetLabel(w, now), projectionLabel(w, now)].filter(Boolean);
+  const projection = projectionLabel(w, now);
   return (
     <li className="limits-window" data-tone={windowTone(w)}>
-      <div className="limits-window-head">
-        <span className="limits-window-name">{w.window}</span>
-        <span className="limits-window-pct num">{pct == null ? "?" : `${Math.round(pct)}%`}</span>
-      </div>
+      <span className="limits-window-name">{w.window}</span>
       <div
         className="limits-bar"
         role="progressbar"
@@ -140,7 +148,33 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
       >
         <i style={{ width: `${pct ?? 0}%` }} />
       </div>
-      {notes.length > 0 && <div className="limits-window-note">{notes.join(" · ")}</div>}
+      <span className="limits-window-pct num">{pct == null ? "?" : `${Math.round(pct)}%`}</span>
+      <span className="limits-window-reset num" title={resetTitle(w, now)}>
+        {resetLabel(w, now)}
+      </span>
+      {projection && <span className="limits-window-note">{projection}</span>}
     </li>
+  );
+}
+
+function Balances({ accounts }: { accounts: LimitsAccount[] }) {
+  return (
+    <section className="section limits-card limits-balances">
+      <h2 className="limits-name limits-balances-title">Balances</h2>
+      <ul className="limits-balance-list">
+        {accounts.map((a) => {
+          const { amount, detail } = balanceRow(a);
+          return (
+            <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status}>
+              <ProviderLogo provider={a.provider} />
+              <span className="limits-balance-name">{a.label}</span>
+              <span className="limits-balance-amount num">{amount}</span>
+              {a.status === "inactive" && <span className="limits-status limits-status--inactive">{statusLabel(a)}</span>}
+              {detail && <span className="limits-balance-detail num">{detail}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
