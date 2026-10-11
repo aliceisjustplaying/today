@@ -19,7 +19,7 @@ Read `docs/SPEC.md` first for what the product is. Read `docs/SETUP.md` for the 
 - **Do not** reach for `process.env` outside `config.ts`/`main.ts`, or open extra SQLite connections; route handlers get both via `c.env`.
 - **Do not** introduce manual / fixture / hardcoded data paths as a v0 shortcut. Every data source is a real integration. (See `MEMORY.md → feedback-no-manual-data`.)
 - **Do not** moralize about money in UI copy or AI outputs (e.g. Uber spend). Encode preferences neutrally in `prefs`.
-- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Linear. Those are app-local state on the `body_state` and `prep_steps` tables.
+- **Do not** mix prep / body-state ("eat", "shave", "leave by") into Linear. Those are app-local state on the `prep_steps`, `prep_checks` and `prep_days` tables.
 
 ## Conventions
 

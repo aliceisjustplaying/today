@@ -112,7 +112,10 @@ GET  /api/events
 GET  /api/returns
 GET  /api/now
 POST /api/tasks/:workspace/:id/close
-POST /api/body-state
+GET  /api/prep
+POST /api/prep
+PUT  /api/prep/steps
+GET  /api/prep/history
 ```
 
 Auth routes:
@@ -190,34 +193,29 @@ type NowState = {
     prepRequiredMinutes: number
     bufferMinutes: number
   } | null
-  bodyState: BodyState
-  prepSteps: PrepStep[]
+  prep: PrepToday
   travelError: string | null
 }
 
-type BodyState = {
-  id: number
-  eaten: boolean
-  showered: boolean
-  shaved: boolean
-  dressed: boolean
-  packed: boolean
+type PrepToday = {
+  day: string // YYYY-MM-DD in TIMEZONE; checks and the late flag reset when it changes
+  steps: { id: number; label: string; minutes: number; done: boolean; doneAt: string | null }[]
   runningLate: boolean
-  updatedAt: string
-}
-
-type PrepStep = {
-  key: "eaten" | "showered" | "shaved" | "dressed" | "packed"
-  minutes: number
-  done: boolean
+  remainingMinutes: number // minutes of unchecked steps, subtracted from the leave-by time
 }
 ```
+
+`POST /api/prep` takes `{ stepId, done }` and/or `{ runningLate }` for today. `PUT /api/prep/steps` replaces the ordered step list (`{ steps: [{ id?, label, minutes }] }`); steps left out are soft-removed so their history stays. `GET /api/prep/history` returns the last 30 days of checks with tick times, the late flag and each step's average tick time.
+
+The prep pills only show when there is an anchor event. The day rolls over lazily: checks are stored per day, so nothing needs resetting.
 
 SQLite tables:
 
 - `sessions`
 - `oauth_tokens`
-- `body_state`
+- `prep_steps` (editable steps; `removed_at` marks removed ones)
+- `prep_checks` (one row per day and step, with the tick time)
+- `prep_days` (the per-day late flag)
 - `candidates` (reserved for future capture work)
 - `prefs` (reserved for future preference UI)
 

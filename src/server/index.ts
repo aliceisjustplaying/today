@@ -9,7 +9,8 @@ import {
   findNextAnchor,
   GoogleReauthNeeded,
 } from "./google";
-import { computeNowState, updateBodyState } from "./now";
+import { computeNowState } from "./now";
+import { getPrepHistory, getPrepToday, parseStepInputs, PrepInputError, saveSteps, updatePrepToday } from "./prep";
 import { getReturns } from "./returns";
 import { fetchLimitsSummary, LimitsUnavailable } from "./limits";
 import { completeIssue, LinearError, listAssignedIssues, tabTasks } from "./linear";
@@ -113,15 +114,32 @@ app.post("/api/tasks/:workspace/:id/close", requireSession, async (c) => {
   }
 });
 
-app.post("/api/body-state", requireSession, async (c) => {
-  const body = (await c.req.json()) as Record<string, unknown>;
-  const updates: Record<string, boolean> = {};
-  for (const k of ["eaten", "showered", "shaved", "dressed", "packed", "runningLate"]) {
-    if (typeof body[k] === "boolean") updates[k] = body[k] as boolean;
+app.get("/api/prep", requireSession, async (c) =>
+  c.json(await getPrepToday(c.env.db, c.env.TIMEZONE)),
+);
+
+app.post("/api/prep", requireSession, async (c) => {
+  try {
+    return c.json(await updatePrepToday(c.env.db, c.env.TIMEZONE, await c.req.json()));
+  } catch (e) {
+    if (e instanceof PrepInputError) return c.json({ error: e.message }, 400);
+    throw e;
   }
-  const row = await updateBodyState(c.env, updates);
-  return c.json(row);
 });
+
+app.put("/api/prep/steps", requireSession, async (c) => {
+  try {
+    await saveSteps(c.env.db, parseStepInputs(await c.req.json()));
+    return c.json(await getPrepToday(c.env.db, c.env.TIMEZONE));
+  } catch (e) {
+    if (e instanceof PrepInputError) return c.json({ error: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/api/prep/history", requireSession, async (c) =>
+  c.json(await getPrepHistory(c.env.db, c.env.TIMEZONE)),
+);
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 

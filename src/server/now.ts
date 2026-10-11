@@ -1,6 +1,5 @@
-import { eq } from "drizzle-orm";
-import { bodyState } from "./db/schema";
 import type { AppEnv } from "./env";
+import { getPrepToday, type PrepToday } from "./prep";
 import {
   getValidGoogleAccessToken,
   listAllCalendarEvents,
@@ -13,63 +12,6 @@ import {
   isVirtualLocation,
   type TravelMode,
 } from "./routes-api";
-
-export const PREP_DURATIONS = {
-  eaten: 15,
-  showered: 15,
-  shaved: 10,
-  dressed: 5,
-  packed: 10,
-} as const;
-
-export type PrepKey = keyof typeof PREP_DURATIONS;
-export type BodyStateRow = typeof bodyState.$inferSelect;
-
-export async function ensureBodyState(env: AppEnv): Promise<BodyStateRow> {
-  const existing = await env.db
-    .select()
-    .from(bodyState)
-    .where(eq(bodyState.id, 1))
-    .limit(1);
-  if (existing[0]) return existing[0];
-
-  const now = new Date();
-  await env.db.insert(bodyState).values({
-    id: 1,
-    eaten: false,
-    showered: false,
-    shaved: false,
-    dressed: false,
-    packed: false,
-    runningLate: false,
-    updatedAt: now,
-  });
-  const seeded = await env.db
-    .select()
-    .from(bodyState)
-    .where(eq(bodyState.id, 1))
-    .limit(1);
-  return seeded[0]!;
-}
-
-export function remainingPrepMinutes(bs: BodyStateRow): {
-  total: number;
-  steps: { key: PrepKey; minutes: number; done: boolean }[];
-} {
-  const steps: { key: PrepKey; minutes: number; done: boolean }[] = (
-    Object.keys(PREP_DURATIONS) as PrepKey[]
-  ).map((key) => ({
-    key,
-    minutes: PREP_DURATIONS[key],
-    done: bs[key],
-  }));
-
-  const total = steps
-    .filter((s) => !s.done)
-    .reduce((sum, s) => sum + s.minutes, 0);
-
-  return { total, steps };
-}
 
 export type NowAnchor = {
   id: string;
@@ -101,8 +43,7 @@ export type NowState = {
   anchor: NowAnchor | null;
   travel: NowTravel | null;
   timing: NowTiming | null;
-  bodyState: BodyStateRow;
-  prepSteps: { key: PrepKey; minutes: number; done: boolean }[];
+  prep: PrepToday;
   travelError: string | null;
 };
 
@@ -124,8 +65,8 @@ export async function computeNowState(
   userSub: string,
 ): Promise<NowState> {
   const now = new Date();
-  const bs = await ensureBodyState(env);
-  const { total: prepRequiredMinutes, steps: prepSteps } = remainingPrepMinutes(bs);
+  const prep = await getPrepToday(env.db, env.TIMEZONE, now);
+  const prepRequiredMinutes = prep.remainingMinutes;
   const bufferMinutes = parseInt(env.BUFFER_MINUTES || "10", 10);
 
   const accessToken = await getValidGoogleAccessToken(env, userSub);
@@ -145,8 +86,7 @@ export async function computeNowState(
       anchor: null,
       travel: null,
       timing: null,
-      bodyState: bs,
-      prepSteps,
+      prep,
       travelError: null,
     };
   }
@@ -219,41 +159,7 @@ export async function computeNowState(
       prepRequiredMinutes,
       bufferMinutes,
     },
-    bodyState: bs,
-    prepSteps,
+    prep,
     travelError,
   };
-}
-
-const ALLOWED_FIELDS = [
-  "eaten",
-  "showered",
-  "shaved",
-  "dressed",
-  "packed",
-  "runningLate",
-] as const;
-type AllowedField = (typeof ALLOWED_FIELDS)[number];
-
-export async function updateBodyState(
-  env: AppEnv,
-  updates: Partial<Record<AllowedField, boolean>>,
-): Promise<BodyStateRow> {
-  await ensureBodyState(env);
-  const filtered: Partial<Record<AllowedField, boolean>> = {};
-  for (const key of ALLOWED_FIELDS) {
-    if (typeof updates[key] === "boolean") filtered[key] = updates[key];
-  }
-  if (Object.keys(filtered).length > 0) {
-    await env.db
-      .update(bodyState)
-      .set({ ...filtered, updatedAt: new Date() })
-      .where(eq(bodyState.id, 1));
-  }
-  const rows = await env.db
-    .select()
-    .from(bodyState)
-    .where(eq(bodyState.id, 1))
-    .limit(1);
-  return rows[0]!;
 }

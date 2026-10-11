@@ -1,42 +1,36 @@
-import type { BodyState, BodyStateUpdate, PrepStep } from "./types";
-
-const SHORT_LABEL: Record<string, string> = {
-  eaten: "ate",
-  showered: "showered",
-  shaved: "shaved",
-  dressed: "dressed",
-  packed: "packed",
-  runningLate: "late",
-};
+import type { PrepToday, PrepUpdate } from "./types";
 
 type Props = {
-  state: BodyState;
-  prepSteps: PrepStep[];
-  onChange: (u: BodyStateUpdate) => void;
+  prep: PrepToday;
+  onChange: (u: PrepUpdate) => void;
+  onEdit: () => void;
 };
 
-export function BodyPills({ state, prepSteps, onChange }: Props) {
+export function BodyPills({ prep, onChange, onEdit }: Props) {
   return (
     <div className="body-pills">
-      {prepSteps.map((step) => (
+      {prep.steps.map((step) => (
         <button
-          key={step.key}
+          key={step.id}
           type="button"
           className={`pill pill--prep ${step.done ? "pill--done" : ""}`}
-          onClick={() => onChange({ [step.key]: !step.done })}
+          onClick={() => onChange({ stepId: step.id, done: !step.done })}
           aria-pressed={step.done}
         >
-          <span className="pill-label">{SHORT_LABEL[step.key]}</span>
-          <span className="pill-mins">{step.minutes}</span>
+          <span className="pill-label">{step.label}</span>
+          <span className="pill-mins">{step.minutes}m</span>
         </button>
       ))}
       <button
         type="button"
-        className={`pill pill--alert ${state.runningLate ? "pill--alert-on" : ""}`}
-        onClick={() => onChange({ runningLate: !state.runningLate })}
-        aria-pressed={state.runningLate}
+        className={`pill pill--alert ${prep.runningLate ? "pill--alert-on" : ""}`}
+        onClick={() => onChange({ runningLate: !prep.runningLate })}
+        aria-pressed={prep.runningLate}
       >
-        <span className="pill-label">{SHORT_LABEL.runningLate}</span>
+        <span className="pill-label">late</span>
+      </button>
+      <button type="button" className="pill pill--edit" onClick={onEdit} aria-label="Edit prep steps">
+        <span className="pill-label">edit</span>
       </button>
     </div>
   );

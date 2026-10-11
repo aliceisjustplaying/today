@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
@@ -33,13 +33,28 @@ export const candidates = sqliteTable("candidates", {
   resolvedAt: integer("resolved_at", { mode: "timestamp" }),
 });
 
-export const bodyState = sqliteTable("body_state", {
-  id: integer("id").primaryKey(),
-  eaten: integer("eaten", { mode: "boolean" }).notNull().default(false),
-  showered: integer("showered", { mode: "boolean" }).notNull().default(false),
-  shaved: integer("shaved", { mode: "boolean" }).notNull().default(false),
-  dressed: integer("dressed", { mode: "boolean" }).notNull().default(false),
-  packed: integer("packed", { mode: "boolean" }).notNull().default(false),
+export const prepSteps = sqliteTable("prep_steps", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  label: text("label").notNull(),
+  minutes: integer("minutes").notNull(),
+  position: integer("position").notNull(),
+  removedAt: integer("removed_at", { mode: "timestamp" }),
+});
+
+export const prepChecks = sqliteTable(
+  "prep_checks",
+  {
+    day: text("day").notNull(),
+    stepId: integer("step_id")
+      .notNull()
+      .references(() => prepSteps.id),
+    checkedAt: integer("checked_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.stepId] })],
+);
+
+export const prepDays = sqliteTable("prep_days", {
+  day: text("day").primaryKey(),
   runningLate: integer("running_late", { mode: "boolean" }).notNull().default(false),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

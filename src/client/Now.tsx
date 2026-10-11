@@ -1,13 +1,14 @@
-import type { BodyStateUpdate, NowState } from "./types";
+import type { NowState, PrepUpdate } from "./types";
 import { BodyPills } from "./BodyPills";
 import { formatDateLong, formatRemaining, formatTime } from "./format";
 
 type Props = {
   state: NowState | null;
-  onBodyStateChange: (u: BodyStateUpdate) => void;
+  onPrepChange: (u: PrepUpdate) => void;
+  onEditPrep: () => void;
 };
 
-export function Now({ state, onBodyStateChange }: Props) {
+export function Now({ state, onPrepChange, onEditPrep }: Props) {
   if (!state) {
     return (
       <section className="now now--loading" aria-busy="true">
@@ -19,7 +20,7 @@ export function Now({ state, onBodyStateChange }: Props) {
     );
   }
 
-  const { currentTime, anchor, travel, timing, bodyState, prepSteps, travelError } = state;
+  const { currentTime, anchor, travel, timing, prep, travelError } = state;
   const hasTravel = travel && (travel.defaultMinutes != null || travel.rescueMinutes != null);
 
   return (
@@ -33,6 +34,9 @@ export function Now({ state, onBodyStateChange }: Props) {
         <div className="now-empty">
           <span className="now-empty-line">No anchor today.</span>{" "}
           <span className="now-empty-sub">free time.</span>
+          <button type="button" className="now-empty-link" onClick={onEditPrep}>
+            prep steps
+          </button>
         </div>
       )}
 
@@ -89,14 +93,10 @@ export function Now({ state, onBodyStateChange }: Props) {
               <span className="now-prep-mins">· {timing.prepRequiredMinutes}m needed</span>
             </div>
           )}
+
+          <BodyPills prep={prep} onChange={onPrepChange} onEdit={onEditPrep} />
         </>
       )}
-
-      <BodyPills
-        state={bodyState}
-        prepSteps={prepSteps}
-        onChange={onBodyStateChange}
-      />
     </section>
   );
 }
