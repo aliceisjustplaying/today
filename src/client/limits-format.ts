@@ -188,7 +188,7 @@ export function statusLabel(a: LimitsAccount): string {
 }
 
 /**
- * The plan chip beside the name: "Max 20x", "Go inactive", Capy's "Lite · renews Oct 16". Null when unknown or
+ * The plan chip beside the name: "Max 20x", "Go inactive", "Lite · renews Oct 16", or "Lite · ends Oct 16" once canceled. Null when unknown or
  * when it would only repeat the name; an inactive card's pill already says the plan lapsed.
  */
 export function planChip(a: LimitsAccount): string | null {
@@ -198,5 +198,7 @@ export function planChip(a: LimitsAccount): string | null {
   if (plan.status !== "active") return a.status === "inactive" ? name : `${name} ${plan.status}`;
   if (name === a.label) return null;
   if (plan.renewsAt == null) return name;
-  return `${name} · renews ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone: TIMEZONE, month: "short", day: "numeric" })}`;
+  // A canceled plan stays active until its period ends, so the date is when it ends, not a renewal.
+  const verb = plan.canceledAt != null ? "ends" : "renews";
+  return `${name} · ${verb} ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone: TIMEZONE, month: "short", day: "numeric" })}`;
 }
