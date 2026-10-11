@@ -53,11 +53,11 @@ export function Now({ state, onPrepChange, onEditPrep }: Props) {
                 </span>
               )}
             </div>
-            <h2 className="now-anchor-title">{p.hide(anchor.title)}</h2>
+            <h2 className="now-anchor-title">{p.decoy("title", anchor.id, anchor.title)}</h2>
             <div className="now-anchor-meta">
               <span className="now-anchor-time">{formatTime(anchor.start)}</span>
               {anchor.location && !anchor.isVirtual && (
-                <span className="now-anchor-loc">{p.hide(anchor.location)}</span>
+                <span className="now-anchor-loc">{p.decoy("location", anchor.id, anchor.location)}</span>
               )}
               {anchor.isVirtual && <span className="now-anchor-virtual">virtual</span>}
             </div>

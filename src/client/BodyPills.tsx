@@ -1,5 +1,5 @@
 import type { PrepToday, PrepUpdate } from "./types";
-import { usePrivacy } from "./privacy";
+import { decoyEach, usePrivacy } from "./privacy";
 
 type Props = {
   prep: PrepToday;
@@ -9,9 +9,10 @@ type Props = {
 
 export function BodyPills({ prep, onChange, onEdit }: Props) {
   const p = usePrivacy();
+  const decoys = decoyEach("prep", [...prep.steps.map((s) => s.id), "late"]);
   return (
     <div className="body-pills">
-      {prep.steps.map((step) => (
+      {prep.steps.map((step, i) => (
         <button
           key={step.id}
           type="button"
@@ -19,7 +20,7 @@ export function BodyPills({ prep, onChange, onEdit }: Props) {
           onClick={() => onChange({ stepId: step.id, done: !step.done })}
           aria-pressed={step.done}
         >
-          <span className="pill-label">{p.hide(step.label)}</span>
+          <span className="pill-label">{p.on ? decoys[i] : step.label}</span>
           <span className="pill-mins">{step.minutes}m</span>
         </button>
       ))}
@@ -29,7 +30,7 @@ export function BodyPills({ prep, onChange, onEdit }: Props) {
         onClick={() => onChange({ runningLate: !prep.runningLate })}
         aria-pressed={prep.runningLate}
       >
-        <span className="pill-label">{p.hide("late")}</span>
+        <span className="pill-label">{p.on ? decoys.at(-1) : "late"}</span>
       </button>
       <button type="button" className="pill pill--edit" onClick={onEdit} aria-label="Edit prep steps">
         <span className="pill-label">edit</span>

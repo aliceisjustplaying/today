@@ -41,8 +41,8 @@ function EventRow({ e }: { e: CalendarEvent }) {
   return (
     <li className="event">
       <span className="event-time">{eventStartTime(e)}</span>
-      <span className="event-title">{p.hide(e.summary ?? "(no title)")}</span>
-      {e.location && <span className="event-loc">{p.hide(e.location)}</span>}
+      <span className="event-title">{p.decoy("title", e.id, e.summary ?? "(no title)")}</span>
+      {e.location && <span className="event-loc">{p.decoy("location", e.id, e.location)}</span>}
     </li>
   );
 }

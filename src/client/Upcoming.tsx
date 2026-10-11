@@ -43,19 +43,19 @@ export function Upcoming({ tasks, completing, onComplete }: Props) {
                   className="task-check"
                   data-completing={completing.has(t.id) ? "true" : undefined}
                   onClick={() => onComplete(t)}
-                  aria-label={`mark "${t.content}" as done`}
+                  aria-label={`mark "${p.decoy("issue", t.id, t.content)}" as done`}
                   disabled={completing.has(t.id)}
                 />
                 <div className="task-body">
-                  <div className="task-content">{p.hide(t.content)}</div>
+                  <div className="task-content">{p.decoy("issue", t.id, t.content)}</div>
                   <div className="task-labels">
-                    <span className="label-chip">{p.hide(t.context)}</span>
+                    <span className="label-chip">{p.decoy("label", t.id, t.context)}</span>
                   </div>
                 </div>
                 <a
                   className="row-open"
                   href={t.url}
-                  aria-label={`open ${t.identifier} in Linear`}
+                  aria-label={`open ${p.decoy("identifier", t.id, t.identifier)} in Linear`}
                 >
                   <OpenIcon />
                 </a>

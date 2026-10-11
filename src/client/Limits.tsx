@@ -4,7 +4,7 @@ import { getCached, setCached } from "./cache";
 import { ProviderLogo } from "./logos";
 import { onResume, signInAgain } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
-import { redactPlanDate, usePrivacy } from "./privacy";
+import { decoyPlanDate, usePrivacy } from "./privacy";
 import {
   ageLabel,
   balanceRow,
@@ -77,6 +77,7 @@ export function Limits() {
   const now = Date.now();
   const balances = summary.accounts.filter(isBalanceOnly);
   const cards = sortByUrgency(summary.accounts.filter((a) => !isBalanceOnly(a)));
+  const sortedBalances = sortByUrgency(balances);
   return (
     <div className="limits">
       {error && (
@@ -90,15 +91,16 @@ export function Limits() {
         </p>
       ))}
       {summary.accounts.length === 0 && <p className="tabs-empty">No accounts configured in limits.</p>}
-      {cards.map((a) => (
-        <AccountCard key={a.id} account={a} now={now} />
+      {cards.map((a, i) => (
+        <AccountCard key={a.id} account={a} position={i} now={now} />
       ))}
-      {balances.length > 0 && <Balances accounts={sortByUrgency(balances)} onChanged={load} />}
+      {balances.length > 0 && <Balances accounts={sortedBalances} firstPosition={cards.length} onChanged={load} />}
     </div>
   );
 }
 
-function AccountCard({ account: a, now }: { account: LimitsAccount; now: number }) {
+/** `position` is the account's place in display order; privacy mode numbers decoy emails by it. */
+function AccountCard({ account: a, position, now }: { account: LimitsAccount; position: number; now: number }) {
   const p = usePrivacy();
   const spend = spendLines(a);
   return (
@@ -117,7 +119,7 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
         <span className="limits-age num" title="last updated">
           {ageLabel(a, now)}
         </span>
-        {a.email && <AccountEmail email={a.email} />}
+        {a.email && <AccountEmail email={a.email} position={position} />}
       </div>
       {a.status === "error" && a.error && <p className="limits-error">{p.text(a.error)}</p>}
       {cardNotice(a) && <p className="limits-notice">{p.text(cardNotice(a)!)}</p>}
@@ -136,15 +138,16 @@ function AccountCard({ account: a, now }: { account: LimitsAccount; now: number 
 function PlanChip({ account }: { account: LimitsAccount }) {
   const p = usePrivacy();
   const chip = planChip(account);
-  return chip ? <span className="limits-plan">{p.on ? redactPlanDate(chip) : chip}</span> : null;
+  return chip ? <span className="limits-plan">{p.on ? decoyPlanDate(chip, account.id) : chip}</span> : null;
 }
 
 /** The account's email on its own line under the name, cut with an ellipsis rather than wrapping. */
-function AccountEmail({ email }: { email: string }) {
+function AccountEmail({ email, position }: { email: string; position: number }) {
   const p = usePrivacy();
+  const shown = p.email(position, email);
   return (
-    <span className="limits-email" title={p.on ? undefined : email}>
-      {p.text(email)}
+    <span className="limits-email" title={shown}>
+      {shown}
     </span>
   );
 }
@@ -222,7 +225,15 @@ function WindowRow({ w, now }: { w: LimitsWindow; now: number }) {
   );
 }
 
-function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChanged: () => Promise<void> }) {
+function Balances({
+  accounts,
+  firstPosition,
+  onChanged,
+}: {
+  accounts: LimitsAccount[];
+  firstPosition: number;
+  onChanged: () => Promise<void>;
+}) {
   const p = usePrivacy();
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -230,7 +241,7 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
     <section className="section limits-card limits-balances">
       <h2 className="limits-name limits-balances-title">Balances</h2>
       <ul className="limits-balance-list">
-        {accounts.map((a) => {
+        {accounts.map((a, i) => {
           const { amount, detail, title, sources } = balanceRow(a);
           return (
             <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status}>
@@ -271,7 +282,7 @@ function Balances({ accounts, onChanged }: { accounts: LimitsAccount[]; onChange
                   {amount && p.text(amount)}
                 </span>
               )}
-              {a.email && <AccountEmail email={a.email} />}
+              {a.email && <AccountEmail email={a.email} position={firstPosition + i} />}
               {detail && <span className="limits-balance-detail num">{p.text(detail)}</span>}
               {expanded === a.id && sources && (
                 <ul className="limits-balance-sources">

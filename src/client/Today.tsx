@@ -70,19 +70,19 @@ export function TaskItem({
         className="task-check"
         data-completing={completing ? "true" : undefined}
         onClick={() => onComplete(task)}
-        aria-label={`mark "${task.content}" as done`}
+        aria-label={`mark "${p.decoy("issue", task.id, task.content)}" as done`}
         disabled={completing}
       />
       <div className="task-body">
-        <div className="task-content">{p.hide(task.content)}</div>
+        <div className="task-content">{p.decoy("issue", task.id, task.content)}</div>
         <div className="task-labels">
-          <span className="label-chip">{p.hide(task.context)}</span>
+          <span className="label-chip">{p.decoy("label", task.id, task.context)}</span>
         </div>
       </div>
       <a
         className="row-open"
         href={task.url}
-        aria-label={`open ${task.identifier} in Linear`}
+        aria-label={`open ${p.decoy("identifier", task.id, task.identifier)} in Linear`}
       >
         <OpenIcon />
       </a>
