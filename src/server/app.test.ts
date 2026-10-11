@@ -69,8 +69,14 @@ describe("config", () => {
     expect(() => loadConfig(base)).toThrow("LINEAR_API_KEY or LINEAR_API_KEYS");
   });
 
+  test("TIMEZONE defaults to the server's own zone", () => {
+    const base = { ALLOWED_EMAIL: "me@example.com", GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", SESSION_SECRET: "s", LINEAR_API_KEY: "k" };
+    expect(loadConfig(base).TIMEZONE).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    expect(loadConfig({ ...base, TIMEZONE: "Asia/Tokyo" }).TIMEZONE).toBe("Asia/Tokyo");
+  });
+
   test("applies defaults", () => {
-    expect(env.TIMEZONE).toBe("Europe/London");
+    expect(env.TIMEZONE).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
     expect(env.BUFFER_MINUTES).toBe("10");
     expect(env.PORT).toBe(8788);
     expect(env.LINEAR_RETURNS_LABEL).toBe("Returns");
@@ -83,6 +89,31 @@ describe("app", () => {
     const res = await app.request("/api/ping", {}, env);
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true });
+  });
+
+  test("robots.txt is plain text that disallows everything, for GET and HEAD, with no session", async () => {
+    const get = await app.request("/robots.txt", {}, env);
+    expect(get.status).toBe(200);
+    expect(get.headers.get("Content-Type")).toStartWith("text/plain");
+    expect(await get.text()).toBe("User-agent: *\nDisallow: /\n");
+
+    const head = await app.request("/robots.txt", { method: "HEAD" }, env);
+    expect(head.status).toBe(200);
+    expect(head.headers.get("Content-Type")).toStartWith("text/plain");
+    expect(await head.text()).toBe("");
+
+    const asJson = await app.request("/robots.txt", { headers: { Accept: "application/json" } }, env);
+    expect(asJson.status).toBe(200);
+    expect(asJson.headers.get("Content-Type")).toStartWith("text/plain");
+  });
+
+  test("every response says noindex, nofollow", async () => {
+    for (const path of ["/robots.txt", "/", "/assets/app.js", "/api/me", "/api/nope", "/auth/google/start"]) {
+      for (const method of ["GET", "HEAD"]) {
+        const res = await app.request(path, { method }, env);
+        expect(`${method} ${path} ${res.headers.get("X-Robots-Tag")}`).toBe(`${method} ${path} noindex, nofollow`);
+      }
+    }
   });
 
   test("api routes need a session", async () => {
@@ -171,9 +202,10 @@ describe("app", () => {
       return Response.json(summary);
     }) as typeof fetch;
     try {
-      const ok = await app.request("/api/limits", { headers: { cookie } }, { ...env, LIMITS_URL: "http://limits.test:9" });
+      const ok = await app.request("/api/limits", { headers: { cookie } }, { ...env, LIMITS_URL: "http://limits.test:9", TIMEZONE: "America/New_York" });
       expect(ok.status).toBe(200);
-      expect(await ok.json()).toEqual(summary);
+      // The SPA formats reset times in the server's TIMEZONE, so the proxy adds it.
+      expect(await ok.json()).toEqual({ ...summary, timezone: "America/New_York" });
       expect(urls).toEqual(["http://limits.test:9/api/summary"]);
 
       globalThis.fetch = (async () => {

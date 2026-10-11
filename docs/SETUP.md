@@ -44,7 +44,7 @@ This is the longest section. All in https://console.cloud.google.com.
 - Create a **personal API key**: Linear → Settings → Security & access → Personal API keys. Give it read and write access to the teams that hold your todos. Set it as `LINEAR_API_KEY`; the app sends it as the raw `Authorization` header.
 - **Several workspaces:** a personal key belongs to one workspace. Create one key per workspace and list them in `LINEAR_API_KEYS` (separated by newlines, spaces or commas; `LINEAR_API_KEY` is also included if set). Issues from every workspace are merged, and completing one uses the key of the workspace it came from.
 - Today and Upcoming show open issues assigned to you with a due date. Completing one moves it to its team's first "completed" workflow state.
-- Today/Upcoming/No date are split into one tab per team. To group or rename them, set `LINEAR_TABS`, e.g. `Life=BEL;Dev=DEV`.
+- Today/Upcoming/No date are split into one tab per team. To group or rename them, set `LINEAR_TABS`, e.g. `Life=HOME;Dev=DEV`.
 - For the Returns section, create a label named **Returns** in each workspace that holds returns (or set `LINEAR_RETURNS_LABEL` to another name) and put it on return issues. They need not be assigned to you; their due dates control urgency and ordering.
 - The Google Tasks scope is no longer requested. The Google Tasks API can be disabled in the Cloud project.
 

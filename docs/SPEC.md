@@ -90,7 +90,7 @@ The No date section lists the remaining open assigned issues with no due date, s
 
 ### Team tabs
 
-Today, Upcoming and No date are split into tabs by Linear team. By default each team with open assigned issues gets its own tab (a team with none gets no tab), named after the team. `LINEAR_TABS` overrides this: `Name=TEAMKEY[,TEAMKEY…];Name=…` (for example `Life=BEL;Dev=DEV`). Configured tabs come first in the given order and are shown even when empty; any team not mapped still gets its own tab so nothing is hidden. The tab bar only appears with two or more tabs; each tab shows its overdue + due-today count, and the chosen tab is remembered on the device.
+Today, Upcoming and No date are split into tabs by Linear team. By default each team with open assigned issues gets its own tab (a team with none gets no tab), named after the team. `LINEAR_TABS` overrides this: `Name=TEAMKEY[,TEAMKEY…];Name=…` (for example `Life=HOME;Dev=DEV`). Configured tabs come first in the given order and are shown even when empty; any team not mapped still gets its own tab so nothing is hidden. The tab bar only appears with two or more tabs; each tab shows its overdue + due-today count, and the chosen tab is remembered on the device.
 
 Calendar, Now and Returns stay outside the tabs: they are not Linear team views, and Returns is a single cross-team list.
 

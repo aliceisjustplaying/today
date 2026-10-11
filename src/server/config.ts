@@ -57,7 +57,7 @@ export function loadConfig(env: EnvSource = process.env): Config {
     LINEAR_RETURNS_LABEL: value("LINEAR_RETURNS_LABEL") ?? "Returns",
     LINEAR_TABS: parseTabs(value("LINEAR_TABS")),
     LIMITS_URL: value("LIMITS_URL") ?? "http://127.0.0.1:8790",
-    TIMEZONE: value("TIMEZONE") ?? "Europe/London",
+    TIMEZONE: value("TIMEZONE") ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",
     BUFFER_MINUTES: value("BUFFER_MINUTES") ?? "10",

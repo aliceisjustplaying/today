@@ -3,7 +3,7 @@ import {
   ageLabel,
   balanceRow,
   formatDuration,
-  formatLondonTime,
+  formatWallTime,
   cardNotice,
   isBalanceOnly,
   isStale,
@@ -21,6 +21,7 @@ import {
 import type { LimitsAccount, LimitsWindow } from "./types";
 
 const now = Date.parse("2026-10-11T12:00:00Z");
+const TZ = "Europe/London";
 const win = (over: Partial<LimitsWindow>): LimitsWindow => ({ window: "5h", usedPercent: 10, resetsAt: null, projection: null, ...over });
 
 describe("limits formatting", () => {
@@ -32,16 +33,20 @@ describe("limits formatting", () => {
     expect(formatDuration(5 * 86_400_000)).toBe("5d");
   });
 
-  test("reset times are Europe/London wall-clock", () => {
-    expect(formatLondonTime(Date.parse("2026-10-11T15:40:00Z"), now)).toBe("16:40");
-    expect(formatLondonTime(Date.parse("2026-10-14T08:00:00Z"), now)).toBe("Wed 09:00");
-    expect(formatLondonTime(Date.parse("2026-11-02T09:00:00Z"), now)).toBe("2 Nov 09:00");
+  test("reset times are wall-clock in the given time zone", () => {
+    expect(formatWallTime(Date.parse("2026-10-11T15:40:00Z"), now, TZ)).toBe("16:40");
+    expect(formatWallTime(Date.parse("2026-10-14T08:00:00Z"), now, TZ)).toBe("Wed 09:00");
+    expect(formatWallTime(Date.parse("2026-11-02T09:00:00Z"), now, TZ)).toBe("2 Nov 09:00");
+    expect(formatWallTime(Date.parse("2026-10-11T15:40:00Z"), now, "America/New_York")).toBe("11:40");
+    // 23:30 UTC is still the 11th in New York but already the 12th in Tokyo.
+    expect(formatWallTime(Date.parse("2026-10-11T23:30:00Z"), now, "America/New_York")).toBe("19:30");
+    expect(formatWallTime(Date.parse("2026-10-11T23:30:00Z"), now, "Asia/Tokyo")).toBe("Mon 08:30");
     const soon = win({ resetsAt: Date.parse("2026-10-11T14:10:00Z") });
     expect(resetLabel(soon, now)).toBe("in 2h 10m");
-    expect(resetTitle(soon, now)).toBe("resets 15:10 London time");
+    expect(resetTitle(soon, now, TZ)).toBe("resets 15:10");
     expect(resetLabel(win({ resetsAt: now - 1 }), now)).toBe("resetting");
     expect(resetLabel(win({}), now)).toBeNull();
-    expect(resetTitle(win({}), now)).toBeUndefined();
+    expect(resetTitle(win({}), now, TZ)).toBeUndefined();
   });
 
   test("bars are colored by headroom alone; a forecast never colors them", () => {
@@ -194,22 +199,22 @@ describe("limits formatting", () => {
       title: "$29.20 used of $1,120.00 · $29.20 this month",
       sources: ["Credit grant · $90.80 of $100.00 left", "Credit grant · $1,000.00 of $1,000.00 left"],
     });
-    expect(planChip(capy)).toBe("Lite · ends Oct 16");
-    expect(planChip({ ...capy, plan: { ...plan, canceledAt: null } })).toBe("Lite · renews Oct 16");
+    expect(planChip(capy, TZ)).toBe("Lite · ends Oct 16");
+    expect(planChip({ ...capy, plan: { ...plan, canceledAt: null } }, TZ)).toBe("Lite · renews Oct 16");
   });
 
   test("plan chips use the upstream's name, flag a lapsed plan, and stay off when unknown", () => {
     const plan = (name: string, status = "active", renewsAt: number | null = null) => ({ name, status, renewsAt, canceledAt: null });
-    expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }))).toBe("Max 20x");
-    expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }))).toBe("SuperGrok");
-    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }))).toBeNull();
-    expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }))).toBe("Go");
-    expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }))).toBe("Go inactive");
+    expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }), TZ)).toBe("Max 20x");
+    expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }), TZ)).toBe("SuperGrok");
+    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }), TZ)).toBeNull();
+    expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }), TZ)).toBe("Go");
+    expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }), TZ)).toBe("Go inactive");
     // Zen's row never wears the Go subscription's chip; Go has its own card.
-    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }))).toBeNull();
-    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "inactive") }))).toBeNull();
-    expect(planChip(acct({ plan: null }))).toBeNull();
-    expect(planChip(acct({}))).toBeNull();
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }), TZ)).toBeNull();
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "inactive") }), TZ)).toBeNull();
+    expect(planChip(acct({ plan: null }), TZ)).toBeNull();
+    expect(planChip(acct({}), TZ)).toBeNull();
   });
 
   test("typed balances parse as dollars", () => {
