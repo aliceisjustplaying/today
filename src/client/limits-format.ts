@@ -114,20 +114,48 @@ export function isBalanceOnly(a: LimitsAccount): boolean {
   return a.windows.length === 0 && a.status !== "error" && Boolean(a.balanceUsd || a.spendUsd);
 }
 
+export type BalanceRow = {
+  /** Null when the balance can be set but hasn't been: the row shows "set balance" instead. */
+  amount: string | null;
+  detail: string | null;
+  /** "low" at 7 days left or fewer, "out" at 2 or fewer or at $0. */
+  tone?: "low" | "out";
+  title?: string;
+};
+
 /** A Balances row: the headline amount and a muted detail. */
-export function balanceRow(a: LimitsAccount): { amount: string; detail: string | null } {
+export function balanceRow(a: LimitsAccount): BalanceRow {
+  const b = a.balanceUsd?.burn;
+  const days = b?.daysLeft;
+  const tone =
+    a.balanceUsd && a.balanceUsd.balance <= 0 ? "out" : days == null ? undefined : days <= 2 ? "out" : days <= 7 ? "low" : undefined;
   if (a.spendUsd) {
     const p = a.spendUsd.projection.credits;
-    return {
-      amount: money(a.spendUsd.credits),
-      detail: p ? `this month · ~${money(p.projectedAtEnd)} by month end` : "this month",
-    };
+    const monthEnd = p ? `~${money(p.projectedAtEnd)} by month end` : null;
+    const thisMonth = `${money(a.spendUsd.credits)} this month`;
+    if (a.balanceUsd) {
+      return {
+        amount: `${money(Math.max(0, a.balanceUsd.balance))} left`,
+        detail: thisMonth + (b?.daysLeft != null ? ` · ~${Math.max(0, Math.round(b.daysLeft))} days left at ${money(b.perDay)}/day` : ""),
+        tone,
+        title: monthEnd ?? undefined,
+      };
+    }
+    if (a.balanceSettable) return { amount: null, detail: monthEnd ? `${thisMonth} · ${monthEnd}` : thisMonth };
+    return { amount: money(a.spendUsd.credits), detail: monthEnd ? `this month · ${monthEnd}` : "this month" };
   }
-  const b = a.balanceUsd?.burn;
   return {
     amount: money(a.balanceUsd?.balance ?? 0),
     detail: b ? `${money(b.perDay)}/day` + (b.daysLeft != null ? ` · ~${Math.round(b.daysLeft)} days left` : "") : null,
+    tone,
   };
+}
+
+/** Parses a typed dollar amount ("58.50", "$1,200"); null when it isn't one. */
+export function parseDollars(raw: string): number | null {
+  const cleaned = raw.replace(/[$,\s]/g, "");
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+  return Number(cleaned);
 }
 
 /** Most used window first; inactive accounts sink to the bottom. */
@@ -137,7 +165,12 @@ export function sortByUrgency(accounts: LimitsAccount[]): LimitsAccount[] {
   return [...accounts].sort((a, b) => peak(b) - peak(a));
 }
 
-/** The status pill: a lapsed subscription is neutral and says what to do, not a red error. */
+/** A partial-data note on a working account; an inactive card's pill says it all, so it gets no line. */
+export function cardNotice(a: LimitsAccount): string | null {
+  return a.status === "ok" ? (a.notice ?? null) : null;
+}
+
+/** The status pill: a lapsed subscription is neutral, not a red error. */
 export function statusLabel(a: LimitsAccount): string {
-  return a.status === "inactive" ? "inactive · renew" : a.status;
+  return a.status;
 }

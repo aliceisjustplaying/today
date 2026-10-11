@@ -172,6 +172,40 @@ describe("app", () => {
     }
   });
 
+  test("/api/limits/accounts/:id/balance forwards the balance to limits behind the session", async () => {
+    const path = "/api/limits/accounts/capy%3Aalice/balance";
+    const post = (body: unknown, cookie?: string) =>
+      app.request(path, { method: "POST", headers: { "Content-Type": "application/json", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) }, { ...env, LIMITS_URL: "http://limits.test:9" });
+    expect((await post({ balanceUsd: 58.5 })).status).toBe(401);
+
+    const cookie = await sessionCookie();
+    const realFetch = globalThis.fetch;
+    const calls: { url: string; init?: RequestInit }[] = [];
+    let reply = Response.json({ account: { id: "capy:alice" } });
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return reply;
+    }) as typeof fetch;
+    try {
+      expect((await post({ balanceUsd: "58.50" }, cookie)).status).toBe(400);
+      expect(calls).toHaveLength(0);
+
+      const ok = await post({ balanceUsd: 58.5, asOf: "ignored" }, cookie);
+      expect(ok.status).toBe(200);
+      expect(await ok.json()).toEqual({ account: { id: "capy:alice" } });
+      expect(calls[0]!.url).toBe("http://limits.test:9/api/accounts/capy%3Aalice/balance");
+      expect(new Headers(calls[0]!.init!.headers).get("X-Limits-Action")).toBe("balance");
+      expect(JSON.parse(String(calls[0]!.init!.body))).toEqual({ balanceUsd: 58.5 });
+
+      reply = Response.json({ error: "unknown account" }, { status: 404 });
+      const missing = await post({ balanceUsd: 1 }, cookie);
+      expect(missing.status).toBe(404);
+      expect(await missing.json()).toEqual({ error: "unknown account" });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   test("session cookie authenticates and prep state persists in SQLite", async () => {
     const cookie = await sessionCookie();
 

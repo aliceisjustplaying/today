@@ -118,6 +118,8 @@ export type LimitsAccount = {
   id: string;
   provider: string;
   label: string;
+  /** The account's email, shown under the label (limits' `email`; absent before it). */
+  email?: string | null;
   /** "inactive": the credential works but the subscription lapsed or the balance is empty. Not an error. */
   status: "ok" | "inactive" | "error" | "pending";
   error: string | null;
@@ -128,6 +130,10 @@ export type LimitsAccount = {
   windows: LimitsWindow[];
   credits?: { balance: number | null; unlimited: boolean; burn: LimitsBurn | null } | null;
   balanceUsd?: { balance: number; burn: LimitsBurn | null } | null;
+  /** Capy: the balance read off Settings → Billing that `balanceUsd` is derived from, or null until set. */
+  balanceAnchor?: { balanceUsd: number; asOf: number } | null;
+  /** True where today can set the balance anchor (Capy). */
+  balanceSettable?: boolean;
   spendUsd?: {
     credits: number;
     total: number;

@@ -1340,7 +1340,6 @@ a {
   border-left-color: var(--border-strong);
 }
 .limits-card[data-status="inactive"] .provider-logo,
-.limits-card[data-status="inactive"] .limits-provider,
 .limits-card[data-status="inactive"] .limits-name {
   color: var(--muted);
 }
@@ -1380,16 +1379,26 @@ a {
 .limits-dot--ok {
   background: var(--emerald);
 }
-.limits-provider {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--accent);
+.limits-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.limits-balance-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.limits-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted);
 }
 .limits-age {
+  margin-left: auto;
   flex-shrink: 0;
   min-width: 22px;
   text-align: right;
@@ -1522,11 +1531,75 @@ a {
   font-size: 11px;
   color: var(--muted);
 }
-.limits-balance[data-status="inactive"] {
-  opacity: 0.6;
+.limits-balance[data-tone="low"] {
+  background: var(--amber-tint);
 }
-.limits-balance[data-status="inactive"] .provider-logo {
-  color: var(--muted);
+.limits-balance[data-tone="low"] .limits-balance-amount {
+  color: var(--amber-deep);
+}
+.limits-balance[data-tone="out"] {
+  background: var(--coral-tint);
+}
+.limits-balance[data-tone="out"] .limits-balance-amount {
+  color: var(--coral-deep);
+}
+.limits-balance[data-tone] {
+  margin: 0 -6px;
+  padding-left: 6px;
+  padding-right: 6px;
+  border-radius: 6px;
+}
+.limits-balance-edit,
+.limits-balance-set {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.limits-balance-edit {
+  font-weight: 700;
+  text-decoration: underline dotted var(--border-strong);
+  text-underline-offset: 3px;
+}
+.limits-balance-set {
+  min-height: 24px;
+  font-weight: 600;
+  color: var(--coral-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.limits-balance-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+}
+.limits-balance-form input {
+  width: 72px;
+  padding: 2px 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: inherit;
+}
+.limits-balance-form button {
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.limits-balance-error {
+  flex-basis: 100%;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--coral-deep);
 }
 .limits-stale {
   margin: 0 2px;
