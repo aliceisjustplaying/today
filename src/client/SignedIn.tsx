@@ -17,7 +17,7 @@ import { TaskTabs } from "./TaskTabs";
 import { clearCached, getCached, setCached } from "./cache";
 import { onResume, signInAgain } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
-import { EyeIcon, PrivacyContext, loadPrivacy, redact, savePrivacy } from "./privacy";
+import { EyeIcon, PrivacyContext, loadPrivacy, maskInline, savePrivacy } from "./privacy";
 
 export function SignedIn() {
   const [now, setNow] = useState<NowState | null>(() => getCached<NowState>("now.v2"));
@@ -247,7 +247,7 @@ export function SignedIn() {
         <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
         <Returns returns={returns} />
 
-        {error && <div className="error-toast">{privacy ? redact(error) : error}</div>}
+        {error && <div className="error-toast">{privacy ? maskInline(error) : error}</div>}
 
         {prepSheet && now && (
           <PrepSheet

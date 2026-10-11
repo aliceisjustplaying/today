@@ -35,17 +35,17 @@ function ReturnRow({ item }: { item: ReturnItem }) {
     <li className="return-item" data-urgency={item.urgency}>
       <div className="return-body">
         <div className="return-head">
-          <span className="return-merchant">{p.hide(item.identifier)}</span>
+          <span className="return-merchant">{p.decoy("identifier", item.id, item.identifier)}</span>
           <span className="return-due">{dueLabel(item)}</span>
         </div>
-        <div className="return-title">{p.hide(item.content)}</div>
-        <div className="return-meta">{p.hide(item.context)}</div>
-        {item.description && <div className="return-action">{p.hide(item.description)}</div>}
+        <div className="return-title">{p.decoy("issue", item.id, item.content)}</div>
+        <div className="return-meta">{p.decoy("label", item.id, item.context)}</div>
+        {item.description && <div className="return-action">{p.decoy("issue", `${item.id}:description`, item.description)}</div>}
       </div>
       <a
         className="row-open"
         href={item.url}
-        aria-label={`open ${item.identifier} in Linear`}
+        aria-label={`open ${p.decoy("identifier", item.id, item.identifier)} in Linear`}
       >
         <OpenIcon />
       </a>

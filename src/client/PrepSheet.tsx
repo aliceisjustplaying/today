@@ -168,7 +168,7 @@ function History() {
         <tbody>
           {history.steps.map((s) => (
             <tr key={s.id} className={s.removed ? "prep-avg--removed" : ""}>
-              <th scope="row">{p.hide(s.label)}</th>
+              <th scope="row">{p.decoy("prep", s.id, s.label)}</th>
               <td className="prep-avg-time">{s.avgDoneMinute == null ? "—" : `~${clock(s.avgDoneMinute)}`}</td>
               <td className="prep-avg-days">
                 {s.doneDays}/{history.days.length} days
@@ -185,7 +185,7 @@ function History() {
               <th />
               {columns.map((c) => (
                 <th key={c.key} scope="col" className={c.removed ? "prep-grid-col--removed" : ""}>
-                  <span>{c.key === "late" ? c.label : p.hide(c.label)}</span>
+                  <span>{p.decoy("prep", c.key, c.label)}</span>
                 </th>
               ))}
             </tr>
