@@ -1,8 +1,9 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import type { LimitsAccount, LimitsSummary, LimitsWindow } from "./types";
 import { getCached, setCached } from "./cache";
 import { ProviderLogo } from "./logos";
-import { onResume, signInAgain } from "./resume";
+import { OpenIcon } from "./icons";
+import { REFETCH_GAP_MS, onResume, signInAgain, throttle } from "./resume";
 import { reloadIfStale, supersededByDeploy } from "./updates";
 import { decoyPlanDate, usePrivacy } from "./privacy";
 import {
@@ -11,6 +12,7 @@ import {
   cardNotice,
   clampPercent,
   isBalanceOnly,
+  isStale,
   parseDollars,
   planChip,
   resetLabel,
@@ -18,6 +20,7 @@ import {
   sortByUrgency,
   spendLines,
   statusLabel,
+  usageUrl,
   windowTone,
 } from "./limits-format";
 
@@ -48,13 +51,13 @@ export function Limits() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => {
-      reloadIfStale();
-      load();
-    };
     load();
-    const interval = window.setInterval(refresh, 60_000);
-    const stopResume = onResume(refresh);
+    const refetch = throttle(load, REFETCH_GAP_MS);
+    const interval = window.setInterval(load, 60_000);
+    const stopResume = onResume(() => {
+      reloadIfStale();
+      refetch();
+    });
     return () => {
       window.clearInterval(interval);
       stopResume();
@@ -106,9 +109,13 @@ function AccountCard({ account: a, position, now }: { account: LimitsAccount; po
   return (
     <section className="section limits-card" data-provider={a.provider} data-status={a.status}>
       <div className="limits-head">
-        <ProviderLogo provider={a.provider} />
+        <UsageLink provider={a.provider} label={a.label} logo>
+          <ProviderLogo provider={a.provider} />
+        </UsageLink>
         <div className="limits-nameline">
-          <h2 className="limits-name">{a.label}</h2>
+          <UsageLink provider={a.provider} label={a.label}>
+            <h2 className="limits-name">{a.label}</h2>
+          </UsageLink>
           <PlanChip account={a} />
           {a.status === "ok" || a.status === "pending" ? (
             <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
@@ -116,7 +123,7 @@ function AccountCard({ account: a, position, now }: { account: LimitsAccount; po
             <span className={`limits-status limits-status--${a.status}`}>{statusLabel(a)}</span>
           )}
         </div>
-        <span className="limits-age num" title="last updated">
+        <span className={`limits-age num${isStale(a, now) ? " limits-age--stale" : ""}`} title="last updated">
           {ageLabel(a, now)}
         </span>
         {a.email && <AccountEmail email={a.email} position={position} />}
@@ -132,6 +139,31 @@ function AccountCard({ account: a, position, now }: { account: LimitsAccount; po
       )}
       {spend.length > 0 && <p className="limits-spend">{p.figures(spend.join(" · "))}</p>}
     </section>
+  );
+}
+
+/**
+ * Opens the provider's usage page outside the app. The logo and the name are two links to the
+ * same page so both are tap targets without restructuring the card grid; the logo's copy stays
+ * out of the tab order and the accessibility tree.
+ */
+function UsageLink({ provider, label, logo, children }: { provider: string; label: string; logo?: boolean; children: ReactNode }) {
+  const href = usageUrl(provider);
+  if (!href) return <>{children}</>;
+  if (logo) {
+    return (
+      <a className="limits-link limits-link--logo" href={href} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-hidden="true">
+        {children}
+      </a>
+    );
+  }
+  return (
+    <a className="limits-link" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} usage page`}>
+      {children}
+      <span className="limits-link-icon">
+        <OpenIcon />
+      </span>
+    </a>
   );
 }
 
@@ -178,7 +210,7 @@ function BalanceEdit({ account: a, onDone }: { account: LimitsAccount; onDone: (
   }
 
   return (
-    <form className="limits-balance-form" onSubmit={submit}>
+    <form className="limits-balance-form" onSubmit={submit} data-editing>
       <span aria-hidden="true">$</span>
       <input
         className="num"
@@ -245,9 +277,13 @@ function Balances({
           const { amount, detail, title, sources } = balanceRow(a);
           return (
             <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status}>
-              <ProviderLogo provider={a.provider} />
+              <UsageLink provider={a.provider} label={a.label} logo>
+                <ProviderLogo provider={a.provider} />
+              </UsageLink>
               <span className="limits-name-row">
-                <span className="limits-balance-name">{a.label}</span>
+                <UsageLink provider={a.provider} label={a.label}>
+                  <span className="limits-balance-name">{a.label}</span>
+                </UsageLink>
                 <PlanChip account={a} />
               </span>
               {editing === a.id ? (

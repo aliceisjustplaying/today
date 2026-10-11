@@ -54,6 +54,23 @@ test("a deploy while the app is in the background reloads into the new build on 
   expect(shells).toContain(`today-shell-${build("b")}`);
 });
 
+test("a deploy waits while the prep editor is open, then reloads on the next resume", async ({ page, request }) => {
+  await openControlled(page);
+  await page.getByRole("button", { name: "Edit prep steps" }).click();
+  await expect(page.getByRole("dialog", { name: "Prep steps" })).toBeVisible();
+
+  await server(request, { dir: "e2e/.builds/b" });
+  await resume(page);
+  await page.waitForTimeout(1500);
+  expect(await runningBuild(page)).toBe(build("a"));
+  await expect(page.getByRole("dialog", { name: "Prep steps" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Close" }).click();
+  await page.waitForTimeout(1100);
+  await resume(page);
+  await expect.poll(() => runningBuild(page)).toBe(build("b"));
+});
+
 test("a service worker stuck on an old build is dropped by the kill switch", async ({ page, request }) => {
   await openControlled(page);
   await server(request, { dir: "e2e/.builds/b", swDir: "e2e/.builds/a" });
@@ -93,8 +110,11 @@ test("a shell whose assets are gone recovers with one reload", async ({ page }) 
 });
 
 test("an expired session on resume goes to sign-in and leaves nothing private cached", async ({ page, request }) => {
+  await page.clock.install();
   await openControlled(page);
   await server(request, { signedIn: false });
+  // A resume within seconds of the last load doesn't refetch; this one comes back later.
+  await page.clock.fastForward(20_000);
   await resume(page);
   await expect(page).toHaveURL(/\/auth\/google\/start$/);
 

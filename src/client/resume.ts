@@ -23,6 +23,23 @@ export function onResume(callback: () => void): () => void {
   };
 }
 
+/** Gap under which a resume skips refetching: a quick app switch shouldn't hit every API again. */
+export const REFETCH_GAP_MS = 15_000;
+
+/**
+ * Wraps a refetch so it runs at most once per `gapMs`. The clock starts at creation, because
+ * the caller has just loaded everything.
+ */
+export function throttle(fn: () => void, gapMs: number, now: () => number = Date.now): () => void {
+  let last = now();
+  return () => {
+    const t = now();
+    if (t - last < gapMs) return;
+    last = t;
+    fn();
+  };
+}
+
 /** The session or the Google grant expired: go through login, without leaving this page in history. */
 export function signInAgain(): void {
   window.location.replace("/auth/google/start");

@@ -6,6 +6,7 @@ import {
   formatLondonTime,
   cardNotice,
   isBalanceOnly,
+  isStale,
   money,
   parseDollars,
   planChip,
@@ -14,6 +15,7 @@ import {
   sortByUrgency,
   spendLines,
   statusLabel,
+  usageUrl,
   windowTone,
 } from "./limits-format";
 import type { LimitsAccount, LimitsWindow } from "./types";
@@ -103,9 +105,33 @@ describe("limits formatting", () => {
   test("age is as short as possible", () => {
     expect(ageLabel(acct({ observedAt: now - 10_000 }), now)).toBe("now");
     expect(ageLabel(acct({ observedAt: now - 60_000 }), now)).toBe("1m");
-    expect(ageLabel(acct({ observedAt: now - 26 * 3_600_000 - 60_000 }), now)).toBe("26h");
-    expect(ageLabel(acct({ observedAt: now - 3 * 86_400_000 }), now)).toBe("3d");
+    expect(ageLabel(acct({ observedAt: now - 26 * 3_600_000 - 60_000 }), now)).toBe("stale 26h");
+    expect(ageLabel(acct({ observedAt: now - 3 * 86_400_000 }), now)).toBe("stale 3d");
     expect(ageLabel(acct({ observedAt: null, status: "pending" }), now)).toBe("waiting");
+  });
+
+  test("data goes stale after an hour since the last successful poll, except on inactive accounts", () => {
+    const hour = 3_600_000;
+    expect(isStale(acct({ observedAt: now - hour }), now)).toBe(false);
+    expect(ageLabel(acct({ observedAt: now - 59 * 60_000 }), now)).toBe("59m");
+    expect(isStale(acct({ observedAt: now - hour - 1 }), now)).toBe(true);
+    expect(ageLabel(acct({ observedAt: now - 3 * hour }), now)).toBe("stale 3h");
+    // A failing poll keeps the old snapshot, so an errored account goes stale on observedAt, not lastAttemptAt.
+    expect(ageLabel(acct({ status: "error", observedAt: now - 3 * hour, lastAttemptAt: now }), now)).toBe("stale 3h");
+    expect(isStale(acct({ status: "inactive", observedAt: now - 30 * hour }), now)).toBe(false);
+    expect(ageLabel(acct({ status: "inactive", observedAt: now - 3 * hour }), now)).toBe("3h");
+    expect(isStale(acct({ observedAt: null, status: "pending" }), now)).toBe(false);
+  });
+
+  test("each provider links to its own usage or billing page", () => {
+    expect(usageUrl("claude")).toBe("https://claude.ai/settings/usage");
+    expect(usageUrl("codex")).toBe("https://chatgpt.com/settings/usage");
+    expect(usageUrl("grok")).toBe("https://grok.com/?_s=usage");
+    expect(usageUrl("opencode")).toBe("https://opencode.ai/auth");
+    expect(usageUrl("opencode-go")).toBe("https://opencode.ai/auth");
+    expect(usageUrl("openrouter")).toBe("https://openrouter.ai/settings/credits");
+    expect(usageUrl("capy")).toBe("https://capy.ai");
+    expect(usageUrl("somethingelse")).toBeNull();
   });
 
   test("money-only accounts go to Balances unless they errored", () => {

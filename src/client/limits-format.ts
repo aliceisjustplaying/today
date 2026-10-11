@@ -81,13 +81,37 @@ export function spendLines(a: LimitsAccount): string[] {
   return lines;
 }
 
-/** Age of the latest data, as short as possible: "now", "1m", "3h". */
+/** Data older than this, from an account that should be fresh, reads "stale". */
+export const STALE_AFTER_MS = 60 * MINUTE;
+
+/** `observedAt` is the last successful poll (limits writes snapshots only on success). Inactive accounts aren't polled for fresh data, so they never go stale. */
+export function isStale(a: LimitsAccount, now: number): boolean {
+  return a.observedAt != null && a.status !== "inactive" && now - a.observedAt > STALE_AFTER_MS;
+}
+
+/** Age of the latest data, as short as possible: "now", "1m", "3h", or "stale 3h" past an hour. */
 export function ageLabel(a: LimitsAccount, now: number): string {
   if (a.observedAt == null) return a.status === "pending" ? "waiting" : "no data";
   const ago = now - a.observedAt;
   if (ago < MINUTE) return "now";
   if (ago < 60 * MINUTE) return formatDuration(ago);
-  return ago < 2 * DAY ? `${Math.floor(ago / (60 * MINUTE))}h` : formatDuration(ago);
+  const age = ago < 2 * DAY ? `${Math.floor(ago / (60 * MINUTE))}h` : formatDuration(ago);
+  return isStale(a, now) ? `stale ${age}` : age;
+}
+
+const USAGE_PAGES: Record<string, string> = {
+  claude: "https://claude.ai/settings/usage",
+  codex: "https://chatgpt.com/settings/usage",
+  grok: "https://grok.com/?_s=usage",
+  opencode: "https://opencode.ai/auth",
+  "opencode-go": "https://opencode.ai/auth",
+  openrouter: "https://openrouter.ai/settings/credits",
+  capy: "https://capy.ai",
+};
+
+/** The provider's own usage or billing page, or null when it has none worth opening. */
+export function usageUrl(provider: string): string | null {
+  return USAGE_PAGES[provider] ?? null;
 }
 
 /** Accounts with nothing but money to show (Zen, OpenRouter, Capy) go in the Balances card. */

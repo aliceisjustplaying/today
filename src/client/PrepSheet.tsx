@@ -22,6 +22,7 @@ export function PrepSheet({ view, steps, onView, onSave, onClose }: Props) {
     <div className="sheet-backdrop" onClick={onClose}>
       <div
         className="sheet"
+        data-editing
         role="dialog"
         aria-modal="true"
         aria-label={view === "edit" ? "Prep steps" : "Prep history"}
