@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CalendarEvent, EventsResponse } from "./types";
 import { fantasticalOpen } from "./urls";
-import { CalendarIcon } from "./icons";
+import { CalendarIcon, ChevronIcon } from "./icons";
 import { usePrivacy } from "./privacy";
 
 function eventStartIso(e: CalendarEvent): string {
@@ -105,7 +105,7 @@ export function Events({ events }: { events: EventsResponse | null }) {
               className={`day-toggle-icon ${tomorrowOpen ? "day-toggle-icon--open" : ""}`}
               aria-hidden="true"
             >
-              ▾
+              <ChevronIcon />
             </span>
           </button>
           {tomorrowOpen && (

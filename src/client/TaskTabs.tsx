@@ -27,22 +27,18 @@ export function TaskTabs({ tasks, completing, onComplete }: Props) {
   return (
     <>
       <nav className="tabs" role="tablist" aria-label="Linear teams and limits">
-        {tabs.map((t) => {
-          const pressing = t.overdue.length + t.today.length;
-          return (
-            <button
-              key={t.name}
-              type="button"
-              role="tab"
-              aria-selected={!showLimits && t.name === tab?.name}
-              className="tab"
-              onClick={() => select(t.name)}
-            >
-              {t.name}
-              {pressing > 0 && <span className="tab-count num">{pressing}</span>}
-            </button>
-          );
-        })}
+        {tabs.map((t) => (
+          <button
+            key={t.name}
+            type="button"
+            role="tab"
+            aria-selected={!showLimits && t.name === tab?.name}
+            className="tab"
+            onClick={() => select(t.name)}
+          >
+            {t.name}
+          </button>
+        ))}
         <button
           type="button"
           role="tab"

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Task, TaskBuckets } from "./types";
 import { TaskItem } from "./Today";
 import { getCached, setCached } from "./cache";
+import { ChevronIcon } from "./icons";
 
 type Props = {
   tasks: TaskBuckets;
@@ -23,7 +24,7 @@ export function NoDate({ tasks, completing, onComplete }: Props) {
       <button type="button" className="day-toggle section-toggle" onClick={toggle} aria-expanded={open}>
         <h2 className="section-title">No date</h2>
         <span className={`day-toggle-icon ${open ? "day-toggle-icon--open" : ""}`} aria-hidden="true">
-          ▾
+          <ChevronIcon />
         </span>
       </button>
       {open && (
