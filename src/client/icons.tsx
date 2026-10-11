@@ -32,3 +32,17 @@ export function CalendarIcon() {
     </svg>
   );
 }
+
+export function ChevronIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M5.5 7.75L10 12.25l4.5-4.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

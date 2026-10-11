@@ -985,7 +985,9 @@ a {
   margin: 0;
 }
 .section-toggle {
-  padding: 0;
+  width: calc(100% + 28px);
+  margin: -12px -14px;
+  padding: 12px 14px;
   color: inherit;
   text-align: left;
 }
@@ -993,12 +995,11 @@ a {
   margin: 0;
 }
 .section-toggle[aria-expanded="true"] {
-  margin-bottom: 10px;
+  margin-bottom: -2px;
 }
 .day-toggle-icon {
+  display: flex;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1;
   transition: transform 0.18s ease;
 }
 .day-toggle-icon--open {
@@ -1335,10 +1336,6 @@ a {
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-card);
-}
-.tab-count {
-  font-feature-settings: "tnum";
-  color: inherit;
 }
 .tabs-empty {
   margin: 4px 2px;
