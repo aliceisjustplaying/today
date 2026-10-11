@@ -871,7 +871,7 @@ a {
 }
 .signin-tag {
   color: var(--muted);
-  margin: 0 0 28px;
+  margin: 0 0 16px;
   font-size: 14px;
   font-family: var(--font-display);
   font-style: italic;
@@ -1022,4 +1022,15 @@ a {
   font-size: 13px;
   color: var(--muted);
   text-align: center;
+}
+.signin-about {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+.signin-privacy {
+  display: block;
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--muted);
 }
