@@ -1036,94 +1036,165 @@ a {
 }
 
 /* limits */
+.limits {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.limits-card,
+.limits-balance {
+  --accent: var(--muted-soft);
+}
+[data-provider="claude"] {
+  --accent: #c2704f;
+}
+[data-provider="codex"] {
+  --accent: #2f6f68;
+}
+[data-provider="grok"] {
+  --accent: #5b6576;
+}
+[data-provider="opencode"],
+[data-provider="opencode-go"] {
+  --accent: #7c62c4;
+}
+[data-provider="openrouter"] {
+  --accent: #5c66d6;
+}
+[data-provider="capy"] {
+  --accent: var(--coral);
+}
+.limits-card.section {
+  padding: 8px 10px 8px 11px;
+  border-left: 3px solid var(--accent);
+}
+.limits-balances.section {
+  border-left-color: var(--border-strong);
+}
+.limits-card[data-status="inactive"] {
+  background: var(--bg-soft);
+  box-shadow: none;
+  border-left-color: var(--border-strong);
+}
+.limits-card[data-status="inactive"] .provider-logo,
+.limits-card[data-status="inactive"] .limits-provider,
+.limits-card[data-status="inactive"] .limits-name {
+  color: var(--muted);
+}
+.limits-card[data-status="inactive"] .limits-windows {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+.provider-logo {
+  flex-shrink: 0;
+  color: var(--accent);
+}
 .limits-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
 }
 .limits-name {
   margin: 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.limits-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-soft);
+}
+.limits-dot--ok {
+  background: var(--emerald);
 }
 .limits-provider {
+  margin-left: auto;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--muted);
+  letter-spacing: 0.14em;
+  color: var(--accent);
 }
-.limits-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0 10px;
-  font-size: 12px;
+.limits-age {
+  flex-shrink: 0;
+  min-width: 22px;
+  text-align: right;
+  font-size: 11px;
   color: var(--muted);
+  font-feature-settings: "tnum";
 }
 .limits-status {
-  font-size: 11px;
+  flex-shrink: 0;
+  font-size: 10px;
   font-weight: 600;
   border-radius: var(--radius-pill);
-  padding: 1px 8px;
-  background: var(--bg-soft);
+  padding: 0 7px;
+  line-height: 16px;
+  background: var(--border);
   color: var(--muted);
-}
-.limits-status--ok {
-  background: var(--emerald-tint);
-  color: var(--emerald-deep);
+  white-space: nowrap;
 }
 .limits-status--error {
   background: var(--rose-tint);
   color: var(--rose-deep);
 }
-.limits-notice {
-  margin: 0 0 10px;
-  font-size: 13px;
+.limits-notice,
+.limits-error {
+  margin: 4px 0 0;
+  font-size: 12px;
   color: var(--muted);
   overflow-wrap: anywhere;
 }
-/* Windows from before a plan lapsed are history, not current headroom. */
-.limits-card[data-status="inactive"] .limits-windows {
-  opacity: 0.55;
-}
 .limits-error {
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 5px 8px;
+  border-radius: 8px;
   background: var(--rose-tint);
   color: var(--rose-deep);
-  font-size: 13px;
-  overflow-wrap: anywhere;
 }
 .limits-windows,
-.limits-spend {
+.limits-balance-list {
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
 }
 .limits-window {
-  padding: 6px 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px 62px;
+  align-items: center;
+  column-gap: 7px;
+  padding: 2px 0;
+  font-size: 12px;
+  --tone: var(--emerald);
+  --tone-ink: var(--emerald-deep);
 }
-.limits-window-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 5px;
-  font-size: 13px;
+.limits-window[data-tone="warn"] {
+  --tone: var(--amber);
+  --tone-ink: var(--amber-deep);
+}
+.limits-window[data-tone="bad"] {
+  --tone: var(--coral);
+  --tone-ink: var(--coral-deep);
 }
 .limits-window-name {
   font-weight: 600;
   color: var(--ink-soft);
-}
-.limits-window-pct {
-  font-feature-settings: "tnum";
-  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .limits-bar {
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-pill);
   background: var(--bg-soft);
   border: 1px solid var(--border);
@@ -1133,33 +1204,65 @@ a {
   display: block;
   height: 100%;
   border-radius: var(--radius-pill);
-  background: var(--emerald);
+  background: var(--tone);
   transition: width 0.3s ease;
 }
-.limits-window[data-tone="warn"] .limits-bar i {
-  background: var(--amber);
-}
-.limits-window[data-tone="bad"] .limits-bar i {
-  background: var(--coral);
-}
-.limits-window[data-tone="bad"] .limits-window-pct {
-  color: var(--coral-deep);
-}
-.limits-window-note {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.limits-spend {
-  margin-top: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--ink-soft);
+.limits-window-pct {
+  text-align: right;
+  font-weight: 700;
+  color: var(--tone-ink);
   font-feature-settings: "tnum";
 }
-.limits-spend li + li {
-  margin-top: 2px;
+.limits-window-reset {
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-feature-settings: "tnum";
+}
+.limits-window-note {
+  grid-column: 2 / -1;
+  font-size: 11px;
+  color: var(--tone-ink);
+}
+.limits-spend {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-feature-settings: "tnum";
+}
+.limits-balances-title {
+  font-size: 15px;
+}
+.limits-balance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.limits-balance:first-child {
+  border-top: 0;
+}
+.limits-balance-name {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.limits-balance-amount {
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+.limits-balance-detail {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.limits-balance[data-status="inactive"] {
+  opacity: 0.6;
+}
+.limits-balance[data-status="inactive"] .provider-logo {
   color: var(--muted);
 }
 .limits-stale {

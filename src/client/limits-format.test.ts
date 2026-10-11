@@ -1,5 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { formatDuration, formatLondonTime, projectionLabel, resetLabel, spendLines, statusLabel, windowTone } from "./limits-format";
+import {
+  ageLabel,
+  balanceRow,
+  formatDuration,
+  formatLondonTime,
+  isBalanceOnly,
+  projectionLabel,
+  resetLabel,
+  resetTitle,
+  sortByUrgency,
+  spendLines,
+  statusLabel,
+  windowTone,
+} from "./limits-format";
 import type { LimitsAccount, LimitsWindow } from "./types";
 
 const now = Date.parse("2026-10-11T12:00:00Z");
@@ -18,19 +31,32 @@ describe("limits formatting", () => {
     expect(formatLondonTime(Date.parse("2026-10-11T15:40:00Z"), now)).toBe("16:40");
     expect(formatLondonTime(Date.parse("2026-10-14T08:00:00Z"), now)).toBe("Wed 09:00");
     expect(formatLondonTime(Date.parse("2026-11-02T09:00:00Z"), now)).toBe("2 Nov 09:00");
-    expect(resetLabel(win({ resetsAt: Date.parse("2026-10-11T14:10:00Z") }), now)).toBe("resets 15:10 · in 2h 10m");
+    const soon = win({ resetsAt: Date.parse("2026-10-11T14:10:00Z") });
+    expect(resetLabel(soon, now)).toBe("in 2h 10m");
+    expect(resetTitle(soon, now)).toBe("resets 15:10 London time");
     expect(resetLabel(win({ resetsAt: now - 1 }), now)).toBe("resetting");
     expect(resetLabel(win({}), now)).toBeNull();
+    expect(resetTitle(win({}), now)).toBeUndefined();
   });
 
-  test("tone and projection", () => {
-    expect(windowTone(win({ usedPercent: 20 }))).toBe("ok");
-    expect(windowTone(win({ usedPercent: 75 }))).toBe("warn");
-    expect(windowTone(win({ usedPercent: 95 }))).toBe("bad");
+  test("bars are colored by headroom, bumped by the projection", () => {
+    expect(windowTone(win({ usedPercent: 59 }))).toBe("ok");
+    expect(windowTone(win({ usedPercent: 60 }))).toBe("warn");
+    expect(windowTone(win({ usedPercent: 84 }))).toBe("warn");
+    expect(windowTone(win({ usedPercent: 85 }))).toBe("bad");
+    expect(windowTone(win({ usedPercent: null }))).toBe("ok");
     const hits = { percentPerHour: 30, projectedAtReset: 100, hitsLimitAt: now + 80 * 60_000, samples: 5 };
     expect(windowTone(win({ usedPercent: 40, projection: hits }))).toBe("bad");
+    expect(windowTone(win({ usedPercent: 40, projection: { ...hits, hitsLimitAt: null, projectedAtReset: 88 } }))).toBe("warn");
+    expect(windowTone(win({ usedPercent: 40, projection: { ...hits, hitsLimitAt: null, projectedAtReset: 70 } }))).toBe("ok");
+  });
+
+  test("projection only shows when heading for the limit", () => {
+    const hits = { percentPerHour: 30, projectedAtReset: 100, hitsLimitAt: now + 80 * 60_000, samples: 5 };
     expect(projectionLabel(win({ projection: hits }), now)).toBe("hits 100% in 1h 20m");
-    expect(projectionLabel(win({ projection: { ...hits, hitsLimitAt: null, projectedAtReset: 64.6 } }), now)).toBe("~65% at reset");
+    expect(projectionLabel(win({ projection: { ...hits, hitsLimitAt: null, projectedAtReset: 92.6 } }), now)).toBe("~93% at reset");
+    expect(projectionLabel(win({ projection: { ...hits, hitsLimitAt: null, projectedAtReset: 84.9 } }), now)).toBeNull();
+    expect(projectionLabel(win({}), now)).toBeNull();
   });
 
   test("Capy spend lines", () => {
@@ -61,5 +87,55 @@ describe("limits formatting", () => {
     expect(statusLabel(account("inactive"))).toBe("inactive · renew");
     expect(statusLabel(account("ok"))).toBe("ok");
     expect(statusLabel(account("error"))).toBe("error");
+  });
+
+  const acct = (over: Partial<LimitsAccount>): LimitsAccount => ({
+    id: "x",
+    provider: "claude",
+    label: "x",
+    status: "ok",
+    error: null,
+    lastAttemptAt: now,
+    observedAt: now,
+    windows: [],
+    ...over,
+  });
+
+  test("age is as short as possible", () => {
+    expect(ageLabel(acct({ observedAt: now - 10_000 }), now)).toBe("now");
+    expect(ageLabel(acct({ observedAt: now - 60_000 }), now)).toBe("1m");
+    expect(ageLabel(acct({ observedAt: now - 26 * 3_600_000 - 60_000 }), now)).toBe("26h");
+    expect(ageLabel(acct({ observedAt: now - 3 * 86_400_000 }), now)).toBe("3d");
+    expect(ageLabel(acct({ observedAt: null, status: "pending" }), now)).toBe("waiting");
+  });
+
+  test("money-only accounts go to Balances unless they errored", () => {
+    const zen = acct({ provider: "opencode", label: "Zen", balanceUsd: { balance: 4.2, burn: null } });
+    expect(isBalanceOnly(zen)).toBe(true);
+    expect(isBalanceOnly(acct({ status: "error", balanceUsd: { balance: 4.2, burn: null } }))).toBe(false);
+    expect(isBalanceOnly(acct({ windows: [win({})], credits: { balance: 10, unlimited: false, burn: null } }))).toBe(false);
+    expect(isBalanceOnly(acct({}))).toBe(false);
+
+    expect(balanceRow(zen)).toEqual({ amount: "$4.20", detail: null });
+    expect(balanceRow(acct({ balanceUsd: { balance: 17.84, burn: { perDay: 0.62, daysLeft: 28.8 } } }))).toEqual({
+      amount: "$17.84",
+      detail: "$0.62/day · ~29 days left",
+    });
+    const capy = acct({
+      provider: "capy",
+      spendUsd: { credits: 41.5, total: 241.5, periodEnd: null, projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null } },
+    });
+    expect(balanceRow(capy)).toEqual({ amount: "$41.50", detail: "this month · ~$128.65 by month end" });
+  });
+
+  test("cards are ordered by their most used window, inactive last", () => {
+    const sorted = sortByUrgency([
+      acct({ id: "low", windows: [win({ usedPercent: 8 }), win({ window: "Week", usedPercent: 27 })] }),
+      acct({ id: "lapsed", status: "inactive", windows: [win({ usedPercent: 99 })] }),
+      acct({ id: "high", windows: [win({ usedPercent: 12 }), win({ window: "Week", usedPercent: 94 })] }),
+      acct({ id: "unknown", windows: [win({ usedPercent: null })] }),
+      acct({ id: "mid", windows: [win({ usedPercent: 62 })] }),
+    ]);
+    expect(sorted.map((a) => a.id)).toEqual(["high", "mid", "low", "unknown", "lapsed"]);
   });
 });
