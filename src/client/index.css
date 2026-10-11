@@ -984,6 +984,17 @@ a {
 .day-toggle .day-label {
   margin: 0;
 }
+.section-toggle {
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+.section-toggle .section-title {
+  margin: 0;
+}
+.section-toggle[aria-expanded="true"] {
+  margin-bottom: 10px;
+}
 .day-toggle-icon {
   color: var(--muted);
   font-size: 14px;
