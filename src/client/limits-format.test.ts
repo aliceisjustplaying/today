@@ -6,6 +6,7 @@ import {
   formatLondonTime,
   cardNotice,
   isBalanceOnly,
+  money,
   parseDollars,
   projectionLabel,
   resetLabel,
@@ -122,6 +123,8 @@ describe("limits formatting", () => {
 
     expect(balanceRow(zen)).toEqual({ amount: "$4.20", detail: null });
     expect(balanceRow(acct({ balanceUsd: { balance: 0, burn: null } }))).toEqual({ amount: "$0.00", detail: null, tone: "out" });
+    expect(balanceRow(acct({ balanceUsd: { balance: -0.12451, burn: null } }))).toEqual({ amount: "-$0.12", detail: null, tone: "out" });
+    expect(money(-0.001)).toBe("$0.00");
     expect(balanceRow(acct({ balanceUsd: { balance: 17.84, burn: { perDay: 0.62, daysLeft: 28.8 } } }))).toEqual({
       amount: "$17.84",
       detail: "$0.62/day · ~29 days left",
