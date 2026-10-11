@@ -8,11 +8,11 @@ export function clampPercent(value: number | null): number | null {
   return value == null ? null : Math.max(0, Math.min(100, value));
 }
 
-/** Headroom: green below 60%, amber to 85%, coral above; a projection to the limit bumps it up. */
+/** Headroom only: green below 60%, amber to 85%, coral above. No forecast colors the bar. */
 export function windowTone(w: LimitsWindow): "bad" | "warn" | "ok" {
   const pct = clampPercent(w.usedPercent) ?? 0;
-  if (pct >= 85 || w.projection?.hitsLimitAt) return "bad";
-  if (pct >= 60 || (w.projection?.projectedAtReset ?? 0) >= 85) return "warn";
+  if (pct >= 85) return "bad";
+  if (pct >= 60) return "warn";
   return "ok";
 }
 
@@ -60,44 +60,23 @@ export function resetTitle(w: LimitsWindow, now: number): string | undefined {
   return `resets ${formatLondonTime(w.resetsAt, now)} London time`;
 }
 
-/** Only worth a line when the window is heading for its limit. */
-export function projectionLabel(w: LimitsWindow, now: number): string | null {
-  const p = w.projection;
-  if (!p) return null;
-  if (p.hitsLimitAt != null) return `hits 100% in ${formatDuration(p.hitsLimitAt - now)}`;
-  if (p.projectedAtReset != null && p.projectedAtReset >= 85) return `~${Math.round(p.projectedAtReset)}% at reset`;
-  return null;
-}
-
-/** "$4.20", "$1,090.80", or "-$0.12" when usage has run past the credits. */
 export function money(n: number): string {
   const digits = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return `${n <= -0.005 ? "-" : ""}$${digits}`;
 }
 
+/** A card's money lines: amounts only, no burn rates or projections. */
 export function spendLines(a: LimitsAccount): string[] {
   const lines: string[] = [];
   if (a.spendUsd) {
-    const p = a.spendUsd.projection.credits;
     lines.push(`${money(a.spendUsd.credits)} credits this month`);
-    if (p) lines.push(`${money(p.perDay)}/day · ~${money(p.projectedAtEnd)} by month end`);
     lines.push(`${money(a.spendUsd.total)} incl. subscriptions`);
   }
-  if (a.balanceUsd) {
-    const b = a.balanceUsd.burn;
-    lines.push(
-      `Balance ${money(a.balanceUsd.balance)}` +
-        (b ? ` · ${money(b.perDay)}/day` + (b.daysLeft != null ? ` · ~${b.daysLeft.toFixed(1)} days left` : "") : ""),
-    );
-  }
+  if (a.balanceUsd) lines.push(`Balance ${money(a.balanceUsd.balance)}`);
   if (a.credits) {
     const c = a.credits;
     if (c.unlimited) lines.push("Credits unlimited");
-    else if (c.balance != null)
-      lines.push(
-        `Credits ${Math.floor(c.balance).toLocaleString("en-GB")}` +
-          (c.burn ? ` · ${Math.round(c.burn.perDay).toLocaleString("en-GB")}/day` : ""),
-      );
+    else if (c.balance != null) lines.push(`Credits ${Math.floor(c.balance).toLocaleString("en-US")}`);
   }
   return lines;
 }
@@ -120,47 +99,28 @@ export type BalanceRow = {
   /** Null when the balance can be set but hasn't been: the row shows "set balance" instead. */
   amount: string | null;
   detail: string | null;
-  /** "low" at 7 days left or fewer, "out" at 2 or fewer or at $0. */
-  tone?: "low" | "out";
   title?: string;
   /** Capy's credit sources, shown when the amount is tapped: "Credit grant · $90.80 of $100.00 left". */
   sources?: string[];
 };
 
-/** A Balances row: the headline amount and a muted detail. */
+/** A Balances row: what's there, never a forecast (no $/day, days left or month-end projection). */
 export function balanceRow(a: LimitsAccount): BalanceRow {
-  const b = a.balanceUsd?.burn;
-  const days = b?.daysLeft;
-  // Only a burn rate earns a color (Capy's days left); a zero or negative balance is just a number.
-  const tone = days == null ? undefined : days <= 2 ? "out" : days <= 7 ? "low" : undefined;
   if (a.spendUsd) {
-    const p = a.spendUsd.projection.credits;
-    const monthEnd = p ? `~${money(p.projectedAtEnd)} by month end` : null;
     const thisMonth = `${money(a.spendUsd.credits)} this month`;
     if (a.billing && a.balanceUsd) {
       return {
         amount: `${money(a.balanceUsd.balance)} left`,
-        detail: b?.daysLeft != null ? `~${Math.max(0, Math.round(b.daysLeft))} days at ${money(b.perDay)}/day` : null,
-        tone,
-        title: [`${money(a.billing.usedUsd)} used of ${money(a.billing.grantedUsd)}`, thisMonth, monthEnd].filter(Boolean).join(" · "),
+        detail: null,
+        title: `${money(a.billing.usedUsd)} used of ${money(a.billing.grantedUsd)} · ${thisMonth}`,
         sources: a.billing.sources.map((s) => `${s.name} · ${money(s.remainingUsd)} of ${money(s.grantedUsd)} left`),
       };
     }
-    if (a.balanceUsd) {
-      return {
-        amount: `${money(Math.max(0, a.balanceUsd.balance))} left`,
-        detail: thisMonth + (b?.daysLeft != null ? ` · ~${Math.max(0, Math.round(b.daysLeft))} days left at ${money(b.perDay)}/day` : ""),
-        tone,
-        title: monthEnd ?? undefined,
-      };
-    }
-    if (a.balanceSettable) return { amount: null, detail: monthEnd ? `${thisMonth} · ${monthEnd}` : thisMonth };
-    return { amount: money(a.spendUsd.credits), detail: monthEnd ? `this month · ${monthEnd}` : "this month" };
+    if (a.balanceUsd) return { amount: `${money(Math.max(0, a.balanceUsd.balance))} left`, detail: null, title: thisMonth };
+    if (a.balanceSettable) return { amount: null, detail: thisMonth };
+    return { amount: money(a.spendUsd.credits), detail: "this month" };
   }
-  return {
-    amount: money(a.balanceUsd?.balance ?? 0),
-    detail: b ? `${money(b.perDay)}/day` + (b.daysLeft != null ? ` · ~${Math.round(b.daysLeft)} days left` : "") : null,
-  };
+  return { amount: money(a.balanceUsd?.balance ?? 0), detail: null };
 }
 
 /** Parses a typed dollar amount ("58.50", "$1,200"); null when it isn't one. */
@@ -193,7 +153,8 @@ export function statusLabel(a: LimitsAccount): string {
  */
 export function planChip(a: LimitsAccount): string | null {
   const plan = a.plan;
-  if (!plan) return null;
+  // The OpenCode console's plan is the Go subscription, which has its own card; Zen is credits.
+  if (!plan || a.provider === "opencode") return null;
   const name = a.provider === "capy" ? plan.name.replace(/^Capy\s+/, "") : plan.name;
   if (plan.status !== "active") return a.status === "inactive" ? name : `${name} ${plan.status}`;
   if (name === a.label) return null;

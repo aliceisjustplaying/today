@@ -9,7 +9,6 @@ import {
   money,
   parseDollars,
   planChip,
-  projectionLabel,
   resetLabel,
   resetTitle,
   sortByUrgency,
@@ -43,27 +42,18 @@ describe("limits formatting", () => {
     expect(resetTitle(win({}), now)).toBeUndefined();
   });
 
-  test("bars are colored by headroom, bumped by the projection", () => {
+  test("bars are colored by headroom alone; a forecast never colors them", () => {
     expect(windowTone(win({ usedPercent: 59 }))).toBe("ok");
     expect(windowTone(win({ usedPercent: 60 }))).toBe("warn");
     expect(windowTone(win({ usedPercent: 84 }))).toBe("warn");
     expect(windowTone(win({ usedPercent: 85 }))).toBe("bad");
     expect(windowTone(win({ usedPercent: null }))).toBe("ok");
     const hits = { percentPerHour: 30, projectedAtReset: 100, hitsLimitAt: now + 80 * 60_000, samples: 5 };
-    expect(windowTone(win({ usedPercent: 40, projection: hits }))).toBe("bad");
-    expect(windowTone(win({ usedPercent: 40, projection: { ...hits, hitsLimitAt: null, projectedAtReset: 88 } }))).toBe("warn");
-    expect(windowTone(win({ usedPercent: 40, projection: { ...hits, hitsLimitAt: null, projectedAtReset: 70 } }))).toBe("ok");
+    expect(windowTone(win({ usedPercent: 9, projection: hits }))).toBe("ok");
+    expect(windowTone(win({ usedPercent: 40, projection: { ...hits, hitsLimitAt: null, projectedAtReset: 88 } }))).toBe("ok");
   });
 
-  test("projection only shows when heading for the limit", () => {
-    const hits = { percentPerHour: 30, projectedAtReset: 100, hitsLimitAt: now + 80 * 60_000, samples: 5 };
-    expect(projectionLabel(win({ projection: hits }), now)).toBe("hits 100% in 1h 20m");
-    expect(projectionLabel(win({ projection: { ...hits, hitsLimitAt: null, projectedAtReset: 92.6 } }), now)).toBe("~93% at reset");
-    expect(projectionLabel(win({ projection: { ...hits, hitsLimitAt: null, projectedAtReset: 84.9 } }), now)).toBeNull();
-    expect(projectionLabel(win({}), now)).toBeNull();
-  });
-
-  test("Capy spend lines", () => {
+  test("card money lines are amounts only", () => {
     const capy = {
       spendUsd: {
         credits: 41.5,
@@ -72,7 +62,10 @@ describe("limits formatting", () => {
         projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null },
       },
     } as LimitsAccount;
-    expect(spendLines(capy)).toEqual(["$41.50 credits this month", "$4.15/day · ~$128.65 by month end", "$241.50 incl. subscriptions"]);
+    expect(spendLines(capy)).toEqual(["$41.50 credits this month", "$241.50 incl. subscriptions"]);
+    expect(spendLines({ credits: { balance: 48237, unlimited: false, burn: { perDay: 0, daysLeft: null } } } as LimitsAccount)).toEqual([
+      "Credits 48,237",
+    ]);
     expect(spendLines({} as LimitsAccount)).toEqual([]);
   });
 
@@ -123,40 +116,32 @@ describe("limits formatting", () => {
     expect(isBalanceOnly(acct({}))).toBe(false);
 
     expect(balanceRow(zen)).toEqual({ amount: "$4.20", detail: null });
-    // A zero or negative balance is plain: no tone, just the number.
+    // A zero or negative balance is plain, and a burn rate never turns into a forecast.
     expect(balanceRow(acct({ balanceUsd: { balance: 0, burn: null } }))).toStrictEqual({ amount: "$0.00", detail: null });
     expect(balanceRow(acct({ balanceUsd: { balance: -0.12451, burn: null } }))).toStrictEqual({ amount: "-$0.12", detail: null });
-    expect(balanceRow(acct({ balanceUsd: { balance: -0.12, burn: { perDay: 0.5, daysLeft: 0 } } })).tone).toBeUndefined();
     expect(money(-0.001)).toBe("$0.00");
-    expect(balanceRow(acct({ balanceUsd: { balance: 17.84, burn: { perDay: 0.62, daysLeft: 28.8 } } }))).toEqual({
+    expect(balanceRow(acct({ balanceUsd: { balance: 17.84, burn: { perDay: 0.62, daysLeft: 28.8 } } }))).toStrictEqual({
       amount: "$17.84",
-      detail: "$0.62/day · ~29 days left",
+      detail: null,
     });
     const capy = acct({
       provider: "capy",
       spendUsd: { credits: 41.5, total: 241.5, periodEnd: null, projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null } },
     });
-    expect(balanceRow(capy)).toEqual({ amount: "$41.50", detail: "this month · ~$128.65 by month end" });
+    expect(balanceRow(capy)).toEqual({ amount: "$41.50", detail: "this month" });
   });
 
   test("Capy shows dollars left once a balance is set, and a set-balance target until then", () => {
     const spendUsd = { credits: 41.5, total: 241.5, periodEnd: null, projection: { credits: { perDay: 4.15, projectedAtEnd: 128.65 }, total: null } };
     const capy = (over: Partial<LimitsAccount>) => acct({ provider: "capy", balanceSettable: true, spendUsd, ...over });
-    expect(balanceRow(capy({ balanceAnchor: null }))).toEqual({ amount: null, detail: "$41.50 this month · ~$128.65 by month end" });
+    expect(balanceRow(capy({ balanceAnchor: null }))).toEqual({ amount: null, detail: "$41.50 this month" });
     const left = (balance: number, daysLeft: number) =>
       balanceRow(capy({ balanceAnchor: { balanceUsd: 100, asOf: 0 }, balanceUsd: { balance, burn: { perDay: 4.15, daysLeft } } }));
-    expect(left(58.5, 14.1)).toEqual({
-      amount: "$58.50 left",
-      detail: "$41.50 this month · ~14 days left at $4.15/day",
-      tone: undefined,
-      title: "~$128.65 by month end",
-    });
-    expect(left(29, 7).tone).toBe("low");
-    expect(left(8.3, 2).tone).toBe("out");
-    expect(left(-3, -0.7)).toMatchObject({ amount: "$0.00 left", detail: "$41.50 this month · ~0 days left at $4.15/day", tone: "out" });
+    expect(left(58.5, 14.1)).toStrictEqual({ amount: "$58.50 left", detail: null, title: "$41.50 this month" });
+    expect(left(-3, -0.7)).toStrictEqual({ amount: "$0.00 left", detail: null, title: "$41.50 this month" });
   });
 
-  test("Capy with a session: dollars left, days at $/day, grants on tap; no set balance", () => {
+  test("Capy with a session: dollars left and grants on tap, no forecast; no set balance", () => {
     const spendUsd = { credits: 29.2, total: 50, periodEnd: null, projection: { credits: { perDay: 2.75, projectedAtEnd: 85.25 }, total: null } };
     const plan = { name: "Capy Lite", status: "active", canceledAt: Date.parse("2026-10-09T19:36:23Z"), renewsAt: Date.parse("2026-10-16T18:55:08Z") };
     const capy = acct({
@@ -177,11 +162,10 @@ describe("limits formatting", () => {
         ],
       },
     });
-    expect(balanceRow(capy)).toEqual({
+    expect(balanceRow(capy)).toStrictEqual({
       amount: "$1,090.80 left",
-      detail: "~397 days at $2.75/day",
-      tone: undefined,
-      title: "$29.20 used of $1,120.00 · $29.20 this month · ~$85.25 by month end",
+      detail: null,
+      title: "$29.20 used of $1,120.00 · $29.20 this month",
       sources: ["Credit grant · $90.80 of $100.00 left", "Credit grant · $1,000.00 of $1,000.00 left"],
     });
     expect(planChip(capy)).toBe("Lite · ends Oct 16");
@@ -195,7 +179,9 @@ describe("limits formatting", () => {
     expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }))).toBeNull();
     expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }))).toBe("Go");
     expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }))).toBe("Go inactive");
-    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }))).toBe("Go · renews Nov 1");
+    // Zen's row never wears the Go subscription's chip; Go has its own card.
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }))).toBeNull();
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "inactive") }))).toBeNull();
     expect(planChip(acct({ plan: null }))).toBeNull();
     expect(planChip(acct({}))).toBeNull();
   });

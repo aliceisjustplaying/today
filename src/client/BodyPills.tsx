@@ -29,7 +29,7 @@ export function BodyPills({ prep, onChange, onEdit }: Props) {
         onClick={() => onChange({ runningLate: !prep.runningLate })}
         aria-pressed={prep.runningLate}
       >
-        <span className="pill-label">late</span>
+        <span className="pill-label">{p.hide("late")}</span>
       </button>
       <button type="button" className="pill pill--edit" onClick={onEdit} aria-label="Edit prep steps">
         <span className="pill-label">edit</span>
