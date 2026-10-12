@@ -141,6 +141,7 @@ describe("limits formatting", () => {
     expect(usageUrl("claude")).toBe("https://claude.ai/settings/usage");
     expect(usageUrl("codex")).toBe("https://chatgpt.com/settings/usage");
     expect(usageUrl("grok")).toBe("https://grok.com/?_s=usage");
+    expect(usageUrl("muse")).toBe("https://accountscenter.meta.com/muse_code/");
     expect(usageUrl("opencode")).toBe("https://opencode.ai/auth");
     expect(usageUrl("opencode-go")).toBe("https://opencode.ai/auth");
     expect(usageUrl("openrouter")).toBe("https://openrouter.ai/settings/credits");
@@ -217,6 +218,8 @@ describe("limits formatting", () => {
     expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }), TZ)).toBe("Max 20x");
     expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }), TZ)).toBe("SuperGrok");
     expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }), TZ)).toBeNull();
+    expect(planChip(acct({ provider: "muse", label: "Muse", plan: plan("Muse Code Power Usage") }), TZ)).toBe("Power Usage");
+    expect(planChip(acct({ provider: "claude", plan: plan("Muse Code Power Usage") }), TZ)).toBe("Muse Code Power Usage");
     expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }), TZ)).toBe("Go");
     expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }), TZ)).toBe("Go inactive");
     // Zen's row never wears the Go subscription's chip; Go has its own card.
