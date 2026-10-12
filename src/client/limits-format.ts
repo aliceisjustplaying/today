@@ -103,6 +103,7 @@ const USAGE_PAGES: Record<string, string> = {
   claude: "https://claude.ai/settings/usage",
   codex: "https://chatgpt.com/settings/usage",
   grok: "https://grok.com/?_s=usage",
+  muse: "https://accountscenter.meta.com/muse_code/",
   opencode: "https://opencode.ai/auth",
   "opencode-go": "https://opencode.ai/auth",
   openrouter: "https://openrouter.ai/settings/credits",
@@ -171,6 +172,9 @@ export function statusLabel(a: LimitsAccount): string {
   return a.status;
 }
 
+/** The provider's name at the front of its plan names ("Capy Lite", "Muse Code Power Usage"), dropped from the chip. */
+const PLAN_PREFIXES: Record<string, RegExp> = { capy: /^Capy\s+/, muse: /^Muse Code\s+/ };
+
 /**
  * The plan chip beside the name: "Max 20x", "Go inactive", "Lite · renews Oct 16", or "Lite · ends Oct 16" once canceled. Null when unknown or
  * when it would only repeat the name; an inactive card's pill already says the plan lapsed.
@@ -179,7 +183,8 @@ export function planChip(a: LimitsAccount, timeZone: string): string | null {
   const plan = a.plan;
   // The OpenCode console's plan is the Go subscription, which has its own card; Zen is credits.
   if (!plan || a.provider === "opencode") return null;
-  const name = a.provider === "capy" ? plan.name.replace(/^Capy\s+/, "") : plan.name;
+  const prefix = PLAN_PREFIXES[a.provider];
+  const name = prefix ? plan.name.replace(prefix, "") : plan.name;
   if (plan.status !== "active") return a.status === "inactive" ? name : `${name} ${plan.status}`;
   if (name === a.label) return null;
   if (plan.renewsAt == null) return name;
