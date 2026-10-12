@@ -76,6 +76,15 @@ describe("limits formatting", () => {
     expect(spendLines({} as LimitsAccount)).toEqual([]);
   });
 
+  test("a Codex card counts its banked resets beside its credits, and says nothing when there are none or limits doesn't know", () => {
+    const credits = { balance: 48237, unlimited: false, burn: null };
+    expect(spendLines({ credits, resetCredits: 2 } as LimitsAccount)).toEqual(["Credits 48,237", "Banked resets 2"]);
+    expect(spendLines({ resetCredits: 1 } as LimitsAccount)).toEqual(["Banked resets 1"]);
+    expect(spendLines({ credits, resetCredits: 0 } as LimitsAccount)).toEqual(["Credits 48,237"]);
+    expect(spendLines({ credits, resetCredits: null } as LimitsAccount)).toEqual(["Credits 48,237"]);
+    expect(spendLines({ credits } as LimitsAccount)).toEqual(["Credits 48,237"]);
+  });
+
   test("inactive is a plain pill with no message line; other statuses pass through", () => {
     const account = (status: LimitsAccount["status"]): LimitsAccount => ({
       id: "opencode-go:main",

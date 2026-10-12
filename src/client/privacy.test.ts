@@ -58,6 +58,7 @@ describe("privacy decoys", () => {
     expect(maskFigures("Credits 0")).toBe("Credits 67");
     expect(maskFigures("$41.50 credits this month · $241.50 incl. subscriptions")).toBe("$67.00 credits this month · $67.00 incl. subscriptions");
     expect(maskFigures("Credits unlimited")).toBe("Credits unlimited");
+    expect(maskFigures("Credits 48,237 · Banked resets 2")).toBe("Credits 67 · Banked resets 67");
   });
 
   test("inline text keeps percentages and times and swaps emails", () => {
