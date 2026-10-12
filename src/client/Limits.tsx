@@ -17,7 +17,7 @@ import {
   planChip,
   resetLabel,
   resetTitle,
-  sortByUrgency,
+  sortAccounts,
   spendLines,
   statusLabel,
   usageUrl,
@@ -80,8 +80,8 @@ export function Limits() {
   const now = Date.now();
   const tz = summary.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const balances = summary.accounts.filter(isBalanceOnly);
-  const cards = sortByUrgency(summary.accounts.filter((a) => !isBalanceOnly(a)));
-  const sortedBalances = sortByUrgency(balances);
+  const cards = sortAccounts(summary.accounts.filter((a) => !isBalanceOnly(a)));
+  const sortedBalances = sortAccounts(balances);
   return (
     <div className="limits">
       {error && (

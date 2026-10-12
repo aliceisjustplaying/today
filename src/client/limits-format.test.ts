@@ -12,7 +12,7 @@ import {
   planChip,
   resetLabel,
   resetTitle,
-  sortByUrgency,
+  sortAccounts,
   spendLines,
   statusLabel,
   usageUrl,
@@ -238,14 +238,84 @@ describe("limits formatting", () => {
     expect(parseDollars("")).toBeNull();
   });
 
-  test("cards are ordered by their most used window, inactive last", () => {
-    const sorted = sortByUrgency([
-      acct({ id: "low", windows: [win({ usedPercent: 8 }), win({ window: "Week", usedPercent: 27 })] }),
-      acct({ id: "lapsed", status: "inactive", windows: [win({ usedPercent: 99 })] }),
-      acct({ id: "high", windows: [win({ usedPercent: 12 }), win({ window: "Week", usedPercent: 94 })] }),
-      acct({ id: "unknown", windows: [win({ usedPercent: null })] }),
-      acct({ id: "mid", windows: [win({ usedPercent: 62 })] }),
+  const plan = (name: string) => ({ name, status: "active", renewsAt: null, canceledAt: null });
+  const ids = (accounts: LimitsAccount[]) => sortAccounts(accounts).map((a) => a.id);
+
+  test("cards go Claude, Codex, Muse, SuperGrok, then other providers in the order limits lists them", () => {
+    const listed = [
+      acct({ id: "openrouter:main", provider: "openrouter" }),
+      acct({ id: "grok:g", provider: "grok" }),
+      acct({ id: "opencode-go:a", provider: "opencode-go" }),
+      acct({ id: "codex:c", provider: "codex" }),
+      acct({ id: "muse:m", provider: "muse" }),
+      acct({ id: "capy:main", provider: "capy" }),
+      acct({ id: "claude:a", provider: "claude" }),
+      acct({ id: "opencode-go:b", provider: "opencode-go" }),
+    ];
+    expect(ids(listed)).toEqual([
+      "claude:a",
+      "codex:c",
+      "muse:m",
+      "grok:g",
+      "openrouter:main",
+      "opencode-go:a",
+      "opencode-go:b",
+      "capy:main",
     ]);
-    expect(sorted.map((a) => a.id)).toEqual(["high", "mid", "low", "unknown", "lapsed"]);
+  });
+
+  test("the order ignores usage, status and the order limits lists accounts in", () => {
+    const listed = [
+      acct({ id: "codex:busy", provider: "codex", email: "b@x.com", windows: [win({ usedPercent: 99 })] }),
+      acct({ id: "claude:lapsed", provider: "claude", email: "z@x.com", status: "inactive" }),
+      acct({ id: "claude:idle", provider: "claude", email: "a@x.com", windows: [win({ usedPercent: 0 })] }),
+      acct({ id: "muse:err", provider: "muse", status: "error" }),
+    ];
+    const expected = ["claude:idle", "claude:lapsed", "codex:busy", "muse:err"];
+    expect(ids(listed)).toEqual(expected);
+    expect(ids([...listed].reverse())).toEqual(expected);
+  });
+
+  test("Claude accounts go Max 20x, Max 5x, Pro, Free, then by email", () => {
+    const listed = [
+      acct({ id: "claude:free", email: "f@x.com" }),
+      acct({ id: "claude:pro-b", email: "b@x.com", plan: plan("Pro") }),
+      acct({ id: "claude:max5", email: "a@x.com", plan: plan("Max 5x") }),
+      acct({ id: "claude:pro-a", email: "A@x.com", plan: plan("Pro") }),
+      acct({ id: "claude:max20", email: "z@x.com", plan: plan("Max 20x") }),
+    ];
+    expect(ids(listed)).toEqual(["claude:max20", "claude:max5", "claude:pro-a", "claude:pro-b", "claude:free"]);
+    expect(ids([...listed].reverse())).toEqual(["claude:max20", "claude:max5", "claude:pro-a", "claude:pro-b", "claude:free"]);
+  });
+
+  test("Codex accounts go Pro, Team/Business/Enterprise, Plus, Free, then by email", () => {
+    const codex = (id: string, email: string, name?: string) => acct({ id, provider: "codex", email, ...(name ? { plan: plan(name) } : {}) });
+    const listed = [
+      codex("codex:free", "a@x.com", "Free"),
+      codex("codex:plus-b", "b@x.com", "Plus"),
+      codex("codex:team", "t@x.com", "Team"),
+      codex("codex:plus-a", "a@x.com", "Plus"),
+      codex("codex:unknown", "u@x.com"),
+      codex("codex:pro", "z@x.com", "Pro"),
+    ];
+    expect(ids(listed)).toEqual(["codex:pro", "codex:team", "codex:plus-a", "codex:plus-b", "codex:free", "codex:unknown"]);
+  });
+
+  test("a plan the order doesn't list goes after the listed paid plans but before Free", () => {
+    const listed = [
+      acct({ id: "claude:free", email: "a@x.com", plan: plan("Free") }),
+      acct({ id: "claude:team", email: "b@x.com", plan: plan("Team") }),
+      acct({ id: "claude:pro", email: "c@x.com", plan: plan("Pro") }),
+    ];
+    expect(ids(listed)).toEqual(["claude:pro", "claude:team", "claude:free"]);
+  });
+
+  test("same plan and no email falls back to id, with emailless accounts last", () => {
+    const listed = [
+      acct({ id: "grok:c", provider: "grok" }),
+      acct({ id: "grok:b", provider: "grok", email: null }),
+      acct({ id: "grok:a", provider: "grok", email: "z@x.com" }),
+    ];
+    expect(ids(listed)).toEqual(["grok:a", "grok:b", "grok:c"]);
   });
 });
