@@ -238,7 +238,7 @@ function Avatar({ e, names, small }: { e: GithubEvent; names: Names; small?: boo
   const cls = `stars-avatar${small ? " stars-avatar--small" : ""}`;
   if (names.blank) return <span className={`${cls} stars-avatar--blank`} aria-hidden="true" />;
   if (e.avatarUrl && !failed) {
-    const src = `${e.avatarUrl}${e.avatarUrl.includes("?") ? "&" : "?"}s=${small ? 44 : 64}`;
+    const src = `${e.avatarUrl}${e.avatarUrl.includes("?") ? "&" : "?"}s=${small ? 72 : 108}`;
     return <img className={cls} src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
   }
   const label = initials(e.name, e.login);
@@ -289,7 +289,7 @@ function StarsSkeleton() {
   );
 }
 
-function StarIcon({ size = 12 }: { size?: number }) {
+function StarIcon({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6L8 1.8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
@@ -299,7 +299,7 @@ function StarIcon({ size = 12 }: { size?: number }) {
 
 function ForkIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="4.5" cy="3.5" r="1.6" stroke="currentColor" strokeWidth="1.4" />
       <circle cx="11.5" cy="3.5" r="1.6" stroke="currentColor" strokeWidth="1.4" />
       <circle cx="8" cy="12.5" r="1.6" stroke="currentColor" strokeWidth="1.4" />
