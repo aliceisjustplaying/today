@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey, index } from "drizzle-orm/sqlite-core";
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
@@ -66,4 +66,29 @@ export const prefs = sqliteTable("prefs", {
   transportRescue: text("transport_rescue"),
   rescueRule: text("rescue_rule"),
   timezone: text("timezone").notNull().default("Europe/London"),
+});
+
+/**
+ * Stars and forks on the Stars tab, kept past GitHub's 300-event / 90-day repo events window.
+ * Stars are WatchEvents (id = the GitHub event id); forks come from the forks API (id = "fork:" + the fork's repo id).
+ */
+export const githubEvents = sqliteTable(
+  "github_events",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["star", "fork"] }).notNull(),
+    repo: text("repo").notNull(),
+    login: text("login").notNull(),
+    avatarUrl: text("avatar_url").notNull(),
+    /** Epoch ms. */
+    at: integer("at").notNull(),
+  },
+  (t) => [index("github_events_at").on(t.at)],
+);
+
+/** GitHub display names, looked up once per login. */
+export const githubUsers = sqliteTable("github_users", {
+  login: text("login").primaryKey(),
+  name: text("name"),
+  fetchedAt: integer("fetched_at").notNull(),
 });

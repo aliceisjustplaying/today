@@ -162,13 +162,16 @@ export type LimitsSummary = {
 };
 
 export type GithubEvent = {
-  kind: "star" | "fork";
+  /** "stars": stars GitHub counted that day with no event to name them, shown as one anonymous row. */
+  kind: "star" | "fork" | "stars";
   repo: string;
   login: string;
   /** The GitHub profile's display name, when set and looked up. */
   name: string | null;
   avatarUrl: string;
   at: number;
+  /** "stars" rows only. */
+  count?: number;
 };
 
 export type GithubRepo = { name: string; stars: number; forks: number; url: string };
@@ -178,8 +181,8 @@ export type GithubFeed = {
   repos: GithubRepo[];
   /** Newest first: the last 30 days, at most 200. */
   events: GithubEvent[];
-  /** GitHub lists stargazers only with a token; without GITHUB_TOKEN the feed is forks only. */
-  starsNeedToken?: boolean;
+  /** No repo's events could be read on the last refresh, so new stars aren't coming in. */
+  starsUnavailable?: boolean;
   generatedAt: number;
   /** today's TIMEZONE; days split by it. */
   timezone?: string;
