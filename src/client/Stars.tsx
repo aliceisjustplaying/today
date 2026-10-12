@@ -97,7 +97,7 @@ export function Stars() {
     <section className="section stars">
       <h2 className="section-title">Stars</h2>
       {error && <p className="stars-note">{error}. Showing data from {new Date(feed.generatedAt).toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" })}.</p>}
-      {feed.starsNeedToken && <p className="stars-note">New stars need a GitHub token (GITHUB_TOKEN). Showing forks only.</p>}
+      {feed.starsUnavailable && <p className="stars-note">New stars are unavailable right now. Forks and totals are current.</p>}
       {counted.length > 0 && (
         <div className="stars-totals">
           {shownRepos.map((r) => (
@@ -111,7 +111,7 @@ export function Stars() {
         </div>
       )}
       {days.length === 0 ? (
-        <StarsEmpty repos={feed.repos} forksOnly={Boolean(feed.starsNeedToken)} />
+        <StarsEmpty repos={feed.repos} />
       ) : (
         days.map((day) => (
           <div key={day.key}>
@@ -128,7 +128,8 @@ export function Stars() {
   );
 }
 
-const rowKey = (row: FeedRow) => (row.type === "burst" ? `b:${row.repo}:${row.events[0]!.at}` : `${row.event.kind}:${row.event.repo}:${row.event.login}`);
+const rowKey = (row: FeedRow) =>
+  row.type === "burst" ? `b:${row.repo}:${row.events[0]!.at}` : `${row.event.kind}:${row.event.repo}:${row.event.login}:${row.event.at}`;
 
 function RepoTotal({ repo, label }: { repo: GithubRepo; label: string }) {
   return (
@@ -190,6 +191,22 @@ function Row({ row, now, names }: { row: FeedRow; now: number; names: Names }) {
 }
 
 function EventRow({ e, now, names }: { e: GithubEvent; now: number; names: Names }) {
+  if (e.kind === "stars") {
+    return (
+      <li className="stars-item">
+        <span className="stars-avatar stars-avatar--burst" aria-hidden="true">
+          <StarIcon />
+        </span>
+        <span className="stars-main">
+          <span className="stars-who">
+            +{e.count} {e.count === 1 ? "star" : "stars"} on <span className="stars-repo">{names.repo(e.repo)}</span>
+          </span>
+          <span className="stars-what">GitHub doesn't say who</span>
+        </span>
+        <span className="stars-time">{ago(e.at, now)}</span>
+      </li>
+    );
+  }
   const who = names.person(e);
   return (
     <li className="stars-item">
@@ -232,7 +249,7 @@ function Avatar({ e, names, small }: { e: GithubEvent; names: Names; small?: boo
   );
 }
 
-function StarsEmpty({ repos, forksOnly }: { repos: GithubRepo[]; forksOnly: boolean }) {
+function StarsEmpty({ repos }: { repos: GithubRepo[] }) {
   const stars = repos.reduce((n, r) => n + r.stars, 0);
   const forks = repos.reduce((n, r) => n + r.forks, 0);
   return (
@@ -240,7 +257,7 @@ function StarsEmpty({ repos, forksOnly }: { repos: GithubRepo[]; forksOnly: bool
       <span className="stars-empty-mark" aria-hidden="true">
         <StarIcon size={18} />
       </span>
-      <p>{forksOnly ? "No new forks" : "No new stars or forks"} in the last 30 days.</p>
+      <p>No new stars or forks in the last 30 days.</p>
       <p>
         Your repos have <b>{stars.toLocaleString("en-US")} stars</b> and <b>{forks.toLocaleString("en-US")} forks</b> in all.
       </p>

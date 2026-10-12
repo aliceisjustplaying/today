@@ -112,7 +112,7 @@ app.get("/api/limits", requireSession, async (c) => {
 
 app.get("/api/github", requireSession, async (c) => {
   try {
-    const feed = await githubSource(c.env.GITHUB_USER, c.env.GITHUB_TOKEN).get();
+    const feed = await githubSource(c.env.db, c.env.GITHUB_USER, c.env.GITHUB_TOKEN).get();
     return c.json({ ...feed, timezone: c.env.TIMEZONE });
   } catch (e) {
     if (e instanceof GithubUnavailable) return c.json({ error: e.message }, 502);
