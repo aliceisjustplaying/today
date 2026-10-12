@@ -3,7 +3,8 @@ import { openDb, migrateDb } from "./db";
 import { githubEvents } from "./db/schema";
 import { GithubSource, GithubUnavailable } from "./github";
 
-const DAY = 86_400_000;
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 const now = Date.parse("2026-10-12T15:00:00Z");
 const today = now - (now % DAY);
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -153,8 +154,44 @@ describe("GithubSource", () => {
     const feed = await new GithubSource(freshDb(), "me", "tok", gh.fetchImpl).get(now);
     const anon = feed.events.filter((e) => e.kind === "stars");
     expect(anon.map((e) => [e.repo, e.count, e.at])).toEqual([
-      ["paint", 2, today + DAY / 2],
-      ["paint", 1, sunday + DAY / 2],
+      ["paint", 2, now],
+      ["paint", 1, sunday + 19 * HOUR],
+    ]);
+  });
+
+  test("the history counts stars by US Pacific date, so a 02:00Z star belongs to the day before", async () => {
+    const gh = fakeGithub(
+      routes({
+        "/repos/me/paint/events": json([watch("30", "uma", today + 2 * HOUR)]),
+        "/repos/me/paint/stargazers/history": json([{ week: sunday / 1000, total: 1, days: [1, 0, 0, 0, 0, 0, 0] }]),
+      }),
+    );
+    const feed = await new GithubSource(freshDb(), "me", "tok", gh.fetchImpl).get(now);
+    expect(feed.events.map((e) => `${e.kind} ${e.login}`)).toEqual(["star uma", "fork forker"]);
+  });
+
+  test("backfilled web stars keep their id and avatar form, get names looked up and are not doubled by a later WatchEvent", async () => {
+    const db = freshDb();
+    await db.insert(githubEvents).values({
+      id: "web:paint:zed",
+      kind: "star",
+      repo: "paint",
+      login: "zed",
+      avatarUrl: "https://avatars.githubusercontent.com/zed?",
+      at: sunday + 19 * HOUR,
+    });
+    const gh = fakeGithub(
+      routes({
+        "/repos/me/paint/events": json([watch("40", "zed", sunday + 20 * HOUR)]),
+        "/repos/me/paint/stargazers/history": json([{ week: sunday / 1000, total: 1, days: [1, 0, 0, 0, 0, 0, 0] }]),
+        "/users/zed": json({ name: "Zed Ash" }),
+      }),
+    );
+    const feed = await new GithubSource(db, "me", "tok", gh.fetchImpl).get(now);
+    expect((await db.select().from(githubEvents)).map((e) => e.id).sort()).toEqual(["fork:77", "web:paint:zed"]);
+    const stars = feed.events.filter((e) => e.kind !== "fork");
+    expect(stars).toEqual([
+      { kind: "star", repo: "paint", login: "zed", name: "Zed Ash", avatarUrl: "https://avatars.githubusercontent.com/zed?", at: sunday + 19 * HOUR },
     ]);
   });
 

@@ -64,7 +64,7 @@ export class GithubUnavailable extends Error {
 
 type Fetch = typeof fetch;
 type Page = { body: unknown; pollSeconds: number | null; changed: boolean };
-export type RepoMemo = { stars: number; forks: number; pollAfter: number; starDays: Map<number, number> | null };
+export type RepoMemo = { stars: number; forks: number; pollAfter: number; starDays: Map<number, number> | null; starDaysAt: number };
 
 /** One feed per user and token; the server keeps a single instance. */
 export class GithubSource {
@@ -104,7 +104,7 @@ export class GithubSource {
     let read = 0;
     let failed = 0;
     await pool(repos, CONCURRENCY, async (repo) => {
-      const memo = this.memo.get(repo.name) ?? { stars: -1, forks: -1, pollAfter: 0, starDays: null };
+      const memo = this.memo.get(repo.name) ?? { stars: -1, forks: -1, pollAfter: 0, starDays: null, starDaysAt: 0 };
       this.memo.set(repo.name, memo);
       if (now >= memo.pollAfter) {
         try {
@@ -125,6 +125,7 @@ export class GithubSource {
       if (memo.stars !== repo.stars) {
         try {
           memo.starDays = repo.stars > 0 ? await this.starHistory(repo) : null;
+          memo.starDaysAt = now;
           memo.stars = repo.stars;
         } catch {
           memo.starDays = null;
@@ -200,7 +201,18 @@ export class GithubSource {
       const known = stars.length
         ? new Set((await this.db.select({ id: githubEvents.id }).from(githubEvents).where(inArray(githubEvents.id, stars.map((e) => e.id)))).map((r) => r.id))
         : new Set<string>();
-      const fresh = stars.filter((e) => !known.has(e.id));
+      const unknown = stars.filter((e) => !known.has(e.id));
+      const starred = unknown.length
+        ? new Set(
+            (
+              await this.db
+                .select({ login: githubEvents.login })
+                .from(githubEvents)
+                .where(and(eq(githubEvents.kind, "star"), eq(githubEvents.repo, repo.name), inArray(githubEvents.login, unknown.map((e) => e.actor.login))))
+            ).map((r) => r.login),
+          )
+        : new Set<string>();
+      const fresh = unknown.filter((e) => !starred.has(e.actor.login));
       if (fresh.length) {
         await this.db
           .insert(githubEvents)
@@ -224,7 +236,10 @@ export class GithubSource {
       .onConflictDoNothing();
   }
 
-  /** Stars per UTC day (keyed by the day's start, epoch ms) from /stargazers/history's weekly rows. */
+  /**
+   * Stars per day from /stargazers/history's weekly rows. GitHub labels each day with its UTC
+   * midnight but counts stars by their US Pacific date, so keys are Pacific dates as UTC midnights.
+   */
   private async starHistory(repo: GithubRepo): Promise<Map<number, number>> {
     const { body } = await this.get_(`/repos/${encodeURIComponent(this.user)}/${encodeURIComponent(repo.name)}/stargazers/history`);
     const days = new Map<number, number>();
@@ -285,25 +300,48 @@ export class GithubSource {
 }
 
 /**
- * Anonymous rows for stars the history counts but no stored event names: per repo and UTC day,
- * the history's count minus the WatchEvents we have, shown at noon that day (or now, if sooner).
+ * Anonymous rows for stars the history counts but no stored event names: per repo and Pacific date,
+ * the history's count minus the stars we have, shown at Pacific noon that day, or when the history was read if that is sooner.
  */
 export function unseenStars(memo: Map<string, RepoMemo>, rows: { kind: string; repo: string; at: number }[], since: number, now: number): GithubEvent[] {
   const seen = new Map<string, number>();
   for (const r of rows) {
     if (r.kind !== "star") continue;
-    const key = `${r.repo}\n${r.at - (r.at % DAY_MS)}`;
+    const key = `${r.repo}\n${pacificDay(r.at)}`;
     seen.set(key, (seen.get(key) ?? 0) + 1);
   }
   const out: GithubEvent[] = [];
   for (const [repo, m] of memo) {
     for (const [day, count] of m.starDays ?? []) {
-      if (day + DAY_MS <= since || day > now) continue;
+      const noon = day + DAY_MS / 2 - pacificOffset(day + DAY_MS / 2);
+      if (noon + DAY_MS / 2 <= since || noon - DAY_MS / 2 > now) continue;
       const missing = count - (seen.get(`${repo}\n${day}`) ?? 0);
-      if (missing > 0) out.push({ kind: "stars", repo, login: "", name: null, avatarUrl: "", at: Math.min(day + DAY_MS / 2, now), count: missing });
+      if (missing > 0) out.push({ kind: "stars", repo, login: "", name: null, avatarUrl: "", at: Math.min(noon, m.starDaysAt), count: missing });
     }
   }
   return out;
+}
+
+const PACIFIC = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  hourCycle: "h23",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+});
+
+/** Pacific wall clock minus UTC at `at`, in ms (-7h or -8h). */
+function pacificOffset(at: number): number {
+  const p = Object.fromEntries(PACIFIC.formatToParts(at).map((x) => [x.type, Number(x.value)]));
+  return Date.UTC(p.year!, p.month! - 1, p.day!, p.hour!, p.minute!) - (at - (at % 60_000));
+}
+
+/** The Pacific calendar date of `at`, as that date's UTC midnight. */
+function pacificDay(at: number): number {
+  const wall = at + pacificOffset(at);
+  return wall - (wall % DAY_MS);
 }
 
 async function pool<T>(items: T[], size: number, fn: (item: T) => Promise<void>): Promise<void> {
