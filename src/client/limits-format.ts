@@ -155,11 +155,41 @@ export function parseDollars(raw: string): number | null {
   return Number(cleaned);
 }
 
-/** Most used window first; inactive accounts sink to the bottom. */
-export function sortByUrgency(accounts: LimitsAccount[]): LimitsAccount[] {
-  const peak = (a: LimitsAccount) =>
-    a.status === "inactive" ? -1 : Math.max(0, ...a.windows.map((w) => clampPercent(w.usedPercent) ?? 0));
-  return [...accounts].sort((a, b) => peak(b) - peak(a));
+/** Providers that lead the page, in this order; every other provider follows in the order limits lists it. */
+const PROVIDER_ORDER = ["claude", "codex", "muse", "grok"];
+
+/** Plans from most to least expensive. A plan not listed goes after the listed paid ones; no plan counts as Free. */
+const PLAN_ORDER: Record<string, string[]> = {
+  claude: ["Max 20x", "Max 5x", "Max", "Pro", "Free"],
+  codex: ["Pro", "Enterprise", "Business", "Team", "Plus", "Free"],
+};
+
+function planRank(a: LimitsAccount): number {
+  const order = PLAN_ORDER[a.provider];
+  if (!order) return 0;
+  const free = order.indexOf("Free");
+  if (!a.plan) return free;
+  const i = order.indexOf(a.plan.name);
+  return i === -1 ? free - 0.5 : i;
+}
+
+/**
+ * A fixed display order that doesn't move with usage or with the order limits happens to list accounts in:
+ * Claude, Codex, Muse, SuperGrok, then the rest by first appearance; within a provider the pricier plan first,
+ * then email (accounts without one last), then id.
+ */
+export function sortAccounts(accounts: LimitsAccount[]): LimitsAccount[] {
+  const seen = [...new Set(accounts.map((a) => a.provider))].filter((p) => !PROVIDER_ORDER.includes(p));
+  const providerRank = (p: string) => (PROVIDER_ORDER.includes(p) ? PROVIDER_ORDER.indexOf(p) : PROVIDER_ORDER.length + seen.indexOf(p));
+  const text = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  return [...accounts].sort(
+    (a, b) =>
+      providerRank(a.provider) - providerRank(b.provider) ||
+      planRank(a) - planRank(b) ||
+      Number(!a.email) - Number(!b.email) ||
+      text((a.email ?? "").toLowerCase(), (b.email ?? "").toLowerCase()) ||
+      text(a.id, b.id),
+  );
 }
 
 /** A partial-data note on a working account; an inactive card's pill says it all, so it gets no line. */
