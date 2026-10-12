@@ -160,3 +160,27 @@ export type LimitsSummary = {
   accounts: LimitsAccount[];
   errors?: { providers: string[]; message: string }[];
 };
+
+export type GithubEvent = {
+  kind: "star" | "fork";
+  repo: string;
+  login: string;
+  /** The GitHub profile's display name, when set and looked up. */
+  name: string | null;
+  avatarUrl: string;
+  at: number;
+};
+
+export type GithubRepo = { name: string; stars: number; forks: number; url: string };
+
+export type GithubFeed = {
+  user: string;
+  repos: GithubRepo[];
+  /** Newest first: the last 30 days, at most 200. */
+  events: GithubEvent[];
+  /** GitHub lists stargazers only with a token; without GITHUB_TOKEN the feed is forks only. */
+  starsNeedToken?: boolean;
+  generatedAt: number;
+  /** today's TIMEZONE; days split by it. */
+  timezone?: string;
+};

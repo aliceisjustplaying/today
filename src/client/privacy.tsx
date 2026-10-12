@@ -58,6 +58,44 @@ export const DECOYS = {
   label: ["Bug", "Website", "Home", "Errands", "Admin", "Feature", "Personal", "Finance", "Design"],
   identifier: ["WEB-142", "HR-7", "OPS-31", "APP-208", "ADM-12", "MOBILE-1024", "FIN-4", "DES-56"],
   date: ["Oct 3", "Nov 14", "Dec 1", "Oct 22", "Nov 7", "Jan 9"],
+  person: [
+    "Robin Ash",
+    "Casey Field",
+    "Jordan Vale",
+    "Alex Moor",
+    "Taylor Brook",
+    "Morgan Hale",
+    "Riley Stone",
+    "Avery Lane",
+    "Quinn Marsh",
+    "Drew Pike",
+    "Jamie Reed",
+    "Sasha Kerr",
+    "Charlie Wren",
+    "Rowan Price",
+  ],
+  repo: [
+    "side-project",
+    "weekend-hack",
+    "notes-app",
+    "tiny-tool",
+    "experiment",
+    "dotfiles-lite",
+    "sketchpad",
+    "toybox",
+    "scratch",
+    "playground",
+    "pixel-garden",
+    "cli-helpers",
+    "recipe-box",
+    "mood-tracker",
+    "static-site",
+    "habit-loop",
+    "web-sandbox",
+    "ascii-art",
+    "budget-sheet",
+    "trail-map",
+  ],
 } as const;
 
 export type DecoyKind = keyof typeof DECOYS;
@@ -76,6 +114,11 @@ function hash(s: string): number {
 export function decoy(kind: DecoyKind, seed: string | number): string {
   const pool = DECOYS[kind];
   return pool[hash(`${kind}:${seed}`) % pool.length]!;
+}
+
+/** A decoy GitHub-style handle for an account id: the decoy person's first name plus two digits. */
+export function decoyHandle(seed: string): string {
+  return `${decoy("person", seed).split(" ")[0]!.toLowerCase()}${10 + (hash(`handle:${seed}`) % 90)}`;
 }
 
 /**
