@@ -119,6 +119,7 @@ describe("app", () => {
   test("api routes need a session", async () => {
     const res = await app.request("/api/me", {}, env);
     expect(res.status).toBe(401);
+    expect((await app.request("/api/github", {}, env)).status).toBe(401);
   });
 
   test("unknown api routes are JSON 404s, not the SPA", async () => {

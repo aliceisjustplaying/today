@@ -6,6 +6,8 @@ test("restores the remembered tab while it still exists, else falls back to To d
   expect(resolveTab("Dev", tabs)).toBe("Dev");
   expect(resolveTab("Limits", tabs)).toBe("Limits");
   expect(resolveTab("Limits", [])).toBe("Limits");
+  expect(resolveTab("Stars", tabs)).toBe("Stars");
+  expect(resolveTab("Stars", [])).toBe("Stars");
   expect(resolveTab("Old team", tabs)).toBe("To do");
   expect(resolveTab(null, tabs)).toBe("To do");
   expect(resolveTab("Old team", ["Dev", "Ops"])).toBe("Dev");

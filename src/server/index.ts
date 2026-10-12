@@ -13,6 +13,7 @@ import { computeNowState } from "./now";
 import { getPrepHistory, getPrepToday, parseStepInputs, PrepInputError, saveSteps, updatePrepToday } from "./prep";
 import { getReturns } from "./returns";
 import { fetchLimitsSummary, LimitsUnavailable, postLimitsBalance } from "./limits";
+import { GithubUnavailable, githubSource } from "./github";
 import { completeIssue, LinearError, listAssignedIssues, tabTasks } from "./linear";
 import type { Env } from "./env";
 
@@ -105,6 +106,16 @@ app.get("/api/limits", requireSession, async (c) => {
     return c.json({ ...(await fetchLimitsSummary(c.env.LIMITS_URL)), timezone: c.env.TIMEZONE });
   } catch (e) {
     if (e instanceof LimitsUnavailable) return c.json({ error: e.message }, 502);
+    throw e;
+  }
+});
+
+app.get("/api/github", requireSession, async (c) => {
+  try {
+    const feed = await githubSource(c.env.GITHUB_USER, c.env.GITHUB_TOKEN).get();
+    return c.json({ ...feed, timezone: c.env.TIMEZONE });
+  } catch (e) {
+    if (e instanceof GithubUnavailable) return c.json({ error: e.message }, 502);
     throw e;
   }
 });

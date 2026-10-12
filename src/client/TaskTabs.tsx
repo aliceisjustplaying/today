@@ -5,7 +5,8 @@ import { Upcoming } from "./Upcoming";
 import { NoDate } from "./NoDate";
 import { Limits } from "./Limits";
 import { getCached, setCached } from "./cache";
-import { LIMITS_TAB, resolveTab } from "./tabs";
+import { Stars } from "./Stars";
+import { LIMITS_TAB, STARS_TAB, resolveTab } from "./tabs";
 
 type Props = {
   tasks: TasksResponse | null;
@@ -18,6 +19,7 @@ export function TaskTabs({ tasks, completing, onComplete }: Props) {
   const tabs = tasks?.tabs ?? [];
   const current = resolveTab(selected, tabs.map((t) => t.name));
   const showLimits = current === LIMITS_TAB;
+  const showStars = current === STARS_TAB;
   const tab = tabs.find((t) => t.name === current);
   const select = (name: string) => {
     setSelected(name);
@@ -26,13 +28,13 @@ export function TaskTabs({ tasks, completing, onComplete }: Props) {
 
   return (
     <>
-      <nav className="tabs" role="tablist" aria-label="Linear teams and limits">
+      <nav className="tabs" role="tablist" aria-label="Linear teams, limits and stars">
         {tabs.map((t) => (
           <button
             key={t.name}
             type="button"
             role="tab"
-            aria-selected={!showLimits && t.name === tab?.name}
+            aria-selected={t.name === tab?.name}
             className="tab"
             onClick={() => select(t.name)}
           >
@@ -48,9 +50,13 @@ export function TaskTabs({ tasks, completing, onComplete }: Props) {
         >
           {LIMITS_TAB}
         </button>
+        <button type="button" role="tab" aria-selected={showStars} className="tab" onClick={() => select(STARS_TAB)}>
+          {STARS_TAB}
+        </button>
       </nav>
       {showLimits && <Limits />}
-      {!showLimits && tab && (
+      {showStars && <Stars />}
+      {tab && (
         <>
           {[tab.overdue, tab.today, tab.upcoming, tab.undated].every((list) => list.length === 0) && (
             <p className="tabs-empty">Nothing open assigned to you in {tab.name}.</p>
