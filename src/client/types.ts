@@ -130,6 +130,8 @@ export type LimitsAccount = {
   windows: LimitsWindow[];
   credits?: { balance: number | null; unlimited: boolean; burn: LimitsBurn | null } | null;
   balanceUsd?: { balance: number; burn: LimitsBurn | null } | null;
+  /** Codex: banked rate-limit resets the account can redeem; null or absent when limits doesn't know. */
+  resetCredits?: number | null;
   /** Capy: the balance read off Settings → Billing that `balanceUsd` is derived from, or null until set. */
   balanceAnchor?: { balanceUsd: number; asOf: number } | null;
   /** True where today can set the balance anchor (Capy). */

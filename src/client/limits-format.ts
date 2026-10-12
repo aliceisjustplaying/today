@@ -77,6 +77,7 @@ export function spendLines(a: LimitsAccount): string[] {
     if (c.unlimited) lines.push("Credits unlimited");
     else if (c.balance != null) lines.push(`Credits ${Math.floor(c.balance).toLocaleString("en-US")}`);
   }
+  if (a.resetCredits) lines.push(`Banked resets ${a.resetCredits}`);
   return lines;
 }
 
