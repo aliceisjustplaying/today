@@ -27,6 +27,7 @@ data
 # caches
 .eslintcache
 .cache
+.ci-env
 *.tsbuildinfo
 
 # IDE / OS

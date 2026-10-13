@@ -84,9 +84,9 @@ api.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
 api.route("/", client);
 
-Bun.serve({
+const server = Bun.serve({
   port,
   fetch: (req) => api.fetch(req, { STATIC_DIR: state.dir } as Env["Bindings"]),
 });
 
-console.log(`e2e server on http://localhost:${port} serving ${state.dir}`);
+console.log(`e2e server on http://localhost:${server.port} serving ${state.dir}`);
