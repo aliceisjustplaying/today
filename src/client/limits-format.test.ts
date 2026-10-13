@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatWallTime,
   cardNotice,
+  hidesOldData,
   isBalanceOnly,
   isStale,
   money,
@@ -100,8 +101,8 @@ describe("limits formatting", () => {
     expect(statusLabel(account("inactive"))).toBe("inactive");
     expect(statusLabel(account("ok"))).toBe("ok");
     expect(statusLabel(account("error"))).toBe("error");
-    expect(cardNotice(account("inactive"))).toBeNull();
-    expect(cardNotice(account("ok"))).toBe("Go ok");
+    expect(cardNotice(account("inactive"), now, TZ)).toBeNull();
+    expect(cardNotice(account("ok"), now, TZ)).toBe("Go ok");
   });
 
   const acct = (over: Partial<LimitsAccount>): LimitsAccount => ({
@@ -114,6 +115,31 @@ describe("limits formatting", () => {
     observedAt: now,
     windows: [],
     ...over,
+  });
+
+  test("a Claude 429 (inactive, no data since) drops the old bars and says when usage comes back, or that there is none", () => {
+    const hour = 3_600_000;
+    const outOfUsage = acct({
+      status: "inactive",
+      notice: "No usage available",
+      availableAt: Date.parse("2026-10-11T13:14:00Z"),
+      observedAt: now - hour,
+      lastAttemptAt: now - 2 * 60_000,
+      windows: [win({ usedPercent: 100 }), win({ window: "Week", usedPercent: 58 })],
+    });
+    expect(hidesOldData(outOfUsage)).toBe(true);
+    expect(cardNotice(outOfUsage, now, TZ)).toBe("Out of usage · back 14:14");
+    expect(statusLabel(outOfUsage)).toBe("inactive");
+    expect(isStale(outOfUsage, now)).toBe(false);
+    expect(ageLabel(outOfUsage, now)).toBe("1h");
+    // No Retry-After, or one that has passed: the notice from limits.
+    expect(cardNotice({ ...outOfUsage, availableAt: null }, now, TZ)).toBe("No usage available");
+    expect(cardNotice({ ...outOfUsage, availableAt: now - 1 }, now, TZ)).toBe("No usage available");
+    // Fresh data on an inactive account (the poll itself said so) stays on the card.
+    expect(hidesOldData({ ...outOfUsage, observedAt: outOfUsage.lastAttemptAt })).toBe(false);
+    // Lapsed with no data ever (Go) is unchanged: a pill, no line.
+    expect(hidesOldData({ ...outOfUsage, observedAt: null, availableAt: null })).toBe(false);
+    expect(cardNotice({ ...outOfUsage, observedAt: null, availableAt: null }, now, TZ)).toBeNull();
   });
 
   test("age is as short as possible", () => {

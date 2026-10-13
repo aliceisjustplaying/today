@@ -125,6 +125,8 @@ export type LimitsAccount = {
   error: string | null;
   /** Why the account is inactive, or a partial-data note on an ok account (limits#4; absent before it). */
   notice?: string | null;
+  /** Inactive accounts: when the upstream said usage comes back, e.g. from a Claude 429's Retry-After; null when it didn't say. */
+  availableAt?: number | null;
   lastAttemptAt: number | null;
   observedAt: number | null;
   windows: LimitsWindow[];

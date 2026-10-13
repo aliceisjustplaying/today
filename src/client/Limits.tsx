@@ -10,6 +10,7 @@ import {
   ageLabel,
   balanceRow,
   cardNotice,
+  hidesOldData,
   clampPercent,
   isBalanceOnly,
   isStale,
@@ -107,6 +108,8 @@ export function Limits() {
 function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount; position: number; now: number; tz: string }) {
   const p = usePrivacy();
   const spend = spendLines(a);
+  const notice = cardNotice(a, now, tz);
+  const oldData = hidesOldData(a);
   return (
     <section className="section limits-card" data-provider={a.provider} data-status={a.status}>
       <div className="limits-head">
@@ -130,15 +133,15 @@ function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount
         {a.email && <AccountEmail email={a.email} position={position} />}
       </div>
       {a.status === "error" && a.error && <p className="limits-error">{p.text(a.error)}</p>}
-      {cardNotice(a) && <p className="limits-notice">{p.text(cardNotice(a)!)}</p>}
-      {a.windows.length > 0 && (
+      {notice && <p className="limits-notice">{p.text(notice)}</p>}
+      {!oldData && a.windows.length > 0 && (
         <ul className="limits-windows">
           {a.windows.map((w) => (
             <WindowRow key={w.window} w={w} now={now} tz={tz} />
           ))}
         </ul>
       )}
-      {spend.length > 0 && <p className="limits-spend">{p.figures(spend.join(" · "))}</p>}
+      {!oldData && spend.length > 0 && <p className="limits-spend">{p.figures(spend.join(" · "))}</p>}
     </section>
   );
 }
