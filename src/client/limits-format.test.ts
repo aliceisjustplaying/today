@@ -16,6 +16,7 @@ import {
   sortAccounts,
   spendLines,
   statusLabel,
+  tokenLines,
   usageUrl,
   windowTone,
 } from "./limits-format";
@@ -343,5 +344,36 @@ describe("limits formatting", () => {
       acct({ id: "grok:a", provider: "grok", email: "z@x.com" }),
     ];
     expect(ids(listed)).toEqual(["grok:a", "grok:b", "grok:c"]);
+  });
+
+  test("ACS sorts right after SuperGrok", () => {
+    const listed = [
+      acct({ id: "openrouter:main", provider: "openrouter" }),
+      acct({ id: "acs:main", provider: "acs" }),
+      acct({ id: "grok:g", provider: "grok" }),
+      acct({ id: "claude:a", provider: "claude" }),
+    ];
+    expect(ids(listed)).toEqual(["claude:a", "grok:g", "acs:main", "openrouter:main"]);
+  });
+
+  test("ACS: token totals as short figures, budgets stay bars, and a signed-out login is a neutral pill", () => {
+    const tokens = {
+      totalTokens: 1_432_625,
+      inputTokens: 1_250_000,
+      outputTokens: 182_625,
+      requests: 4321,
+      todayTokens: 20_500,
+      budgets: [{ name: "Month", usedTokens: 1_432_625, limitTokens: 5_000_000, resetsAt: now + 86_400_000 }],
+    };
+    const a = acct({ id: "acs:main", provider: "acs", tokens, windows: [win({ window: "Month", usedPercent: 28.65 })] });
+    expect(tokenLines(a)).toEqual(["1.43M tokens this month", "20.5k today", "4,321 requests"]);
+    expect(tokenLines({ ...a, tokens: { ...tokens, totalTokens: 950, todayTokens: null } })).toEqual(["950 tokens this month", "4,321 requests"]);
+    expect(tokenLines(acct({ id: "claude:a", provider: "claude" }))).toEqual([]);
+    expect(isBalanceOnly(a)).toBe(false);
+    expect(usageUrl("acs")).toBe("https://infra.acsresearch.org/usage");
+    const expired = { ...a, status: "expired" as const, notice: "ACS session expired, sign in again" };
+    expect(statusLabel(expired)).toBe("session expired");
+    expect(cardNotice(expired, now, TZ)).toBeNull();
+    expect(hidesOldData(expired)).toBe(false);
   });
 });

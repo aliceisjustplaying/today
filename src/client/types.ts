@@ -120,8 +120,8 @@ export type LimitsAccount = {
   label: string;
   /** The account's email, shown under the label (limits' `email`; absent before it). */
   email?: string | null;
-  /** "inactive": the credential works but the subscription lapsed or the balance is empty. Not an error. */
-  status: "ok" | "inactive" | "error" | "pending";
+  /** "inactive": the credential works but the subscription lapsed or the balance is empty. "expired": the web login behind it was signed out. Neither is an error. */
+  status: "ok" | "inactive" | "expired" | "error" | "pending";
   error: string | null;
   /** Why the account is inactive, or a partial-data note on an ok account (limits#4; absent before it). */
   notice?: string | null;
@@ -148,6 +148,15 @@ export type LimitsAccount = {
     unlimited: boolean;
     plan: { name: string; status: string; canceledAt: number | null; renewsAt: number | null } | null;
     sources: { name: string; kind: string; grantedUsd: number; remainingUsd: number; resetsAt: number | null; expiresAt: number | null }[];
+  } | null;
+  /** ACS: this month's token totals from the usage page; each budget is also a window. */
+  tokens?: {
+    totalTokens: number;
+    inputTokens: number;
+    outputTokens: number;
+    requests: number;
+    todayTokens: number | null;
+    budgets: { name: string; usedTokens: number; limitTokens: number; resetsAt: number }[];
   } | null;
   spendUsd?: {
     credits: number;

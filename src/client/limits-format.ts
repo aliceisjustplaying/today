@@ -81,6 +81,23 @@ export function spendLines(a: LimitsAccount): string[] {
   return lines;
 }
 
+/** A token count as short as it reads clearly: 950, 12.3k, 1.43M. */
+export function compactTokens(n: number): string {
+  if (n < 1000) return String(Math.round(n));
+  if (n < 1_000_000) return `${Number((n / 1000).toPrecision(3))}k`;
+  return `${Number((n / 1_000_000).toPrecision(3))}M`;
+}
+
+/** ACS token lines: totals only, the budgets are bars. */
+export function tokenLines(a: LimitsAccount): string[] {
+  const t = a.tokens;
+  if (!t) return [];
+  const lines = [`${compactTokens(t.totalTokens)} tokens this month`];
+  if (t.todayTokens != null) lines.push(`${compactTokens(t.todayTokens)} today`);
+  lines.push(`${t.requests.toLocaleString("en-US")} requests`);
+  return lines;
+}
+
 /** Data older than this, from an account that should be fresh, reads "stale". */
 export const STALE_AFTER_MS = 60 * MINUTE;
 
@@ -113,6 +130,7 @@ const USAGE_PAGES: Record<string, string> = {
   "opencode-go": "https://opencode.ai/auth",
   openrouter: "https://openrouter.ai/settings/credits",
   capy: "https://capy.ai",
+  acs: "https://infra.acsresearch.org/usage",
 };
 
 /** The provider's own usage or billing page, or null when it has none worth opening. */
@@ -161,7 +179,7 @@ export function parseDollars(raw: string): number | null {
 }
 
 /** Providers that lead the page, in this order; every other provider follows in the order limits lists it. */
-const PROVIDER_ORDER = ["claude", "codex", "muse", "grok"];
+const PROVIDER_ORDER = ["claude", "codex", "muse", "grok", "acs"];
 
 /** Plans from most to least expensive. A plan not listed goes after the listed paid ones; no plan counts as Free. */
 const PLAN_ORDER: Record<string, string[]> = {
@@ -180,7 +198,7 @@ function planRank(a: LimitsAccount): number {
 
 /**
  * A fixed display order that doesn't move with usage or with the order limits happens to list accounts in:
- * Claude, Codex, Muse, SuperGrok, then the rest by first appearance; within a provider the pricier plan first,
+ * Claude, Codex, Muse, SuperGrok, ACS, then the rest by first appearance; within a provider the pricier plan first,
  * then email (accounts without one last), then id.
  */
 export function sortAccounts(accounts: LimitsAccount[]): LimitsAccount[] {
@@ -208,9 +226,9 @@ export function cardNotice(a: LimitsAccount, now: number, timeZone: string): str
   return hidesOldData(a) ? (a.notice ?? null) : null;
 }
 
-/** The status pill: a lapsed subscription is neutral, not a red error. */
+/** The status pill: a lapsed subscription or a signed-out login is neutral, not a red error. */
 export function statusLabel(a: LimitsAccount): string {
-  return a.status;
+  return a.status === "expired" ? "session expired" : a.status;
 }
 
 /** The provider's name at the front of its plan names ("Capy Lite", "Muse Code Power Usage"), dropped from the chip. */
