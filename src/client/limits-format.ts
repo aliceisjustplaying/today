@@ -89,6 +89,11 @@ export function isStale(a: LimitsAccount, now: number): boolean {
   return a.observedAt != null && a.status !== "inactive" && now - a.observedAt > STALE_AFTER_MS;
 }
 
+/** An inactive account whose latest poll brought no data (a Claude 429, a lapsed plan): what limits still holds is from before, so the card leaves it out. */
+export function hidesOldData(a: LimitsAccount): boolean {
+  return a.status === "inactive" && a.observedAt != null && a.lastAttemptAt != null && a.observedAt < a.lastAttemptAt;
+}
+
 /** Age of the latest data, as short as possible: "now", "1m", "3h", or "stale 3h" past an hour. */
 export function ageLabel(a: LimitsAccount, now: number): string {
   if (a.observedAt == null) return a.status === "pending" ? "waiting" : "no data";
@@ -192,9 +197,15 @@ export function sortAccounts(accounts: LimitsAccount[]): LimitsAccount[] {
   );
 }
 
-/** A partial-data note on a working account; an inactive card's pill says it all, so it gets no line. */
-export function cardNotice(a: LimitsAccount): string | null {
-  return a.status === "ok" ? (a.notice ?? null) : null;
+/**
+ * A partial-data note on a working account. An inactive card's pill says it all, unless the upstream said when usage comes back
+ * ("Out of usage · back 15:14") or the card hides its old data, where the line says why ("No usage available").
+ */
+export function cardNotice(a: LimitsAccount, now: number, timeZone: string): string | null {
+  if (a.status === "ok") return a.notice ?? null;
+  if (a.status !== "inactive") return null;
+  if (a.availableAt != null && a.availableAt > now) return `Out of usage · back ${formatWallTime(a.availableAt, now, timeZone)}`;
+  return hidesOldData(a) ? (a.notice ?? null) : null;
 }
 
 /** The status pill: a lapsed subscription is neutral, not a red error. */
