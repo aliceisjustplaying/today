@@ -1,0 +1,58 @@
+labels:
+  backend: local
+  platform: linux/amd64
+
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      partial: false
+      depth: 1
+
+steps:
+  install:
+    image: bash
+    environment:
+      BUN_INSTALL_CACHE_DIR: /var/cache/woodpecker-agent/bun
+    commands:
+      - nix print-dev-env --offline --no-write-lock-file .#default > .ci-env
+      - source .ci-env
+      - bun install --frozen-lockfile
+
+  typecheck:
+    image: bash
+    depends_on: [install]
+    commands:
+      - source .ci-env
+      - bun run typecheck
+
+  unit:
+    image: bash
+    depends_on: [install]
+    commands:
+      - source .ci-env
+      - bun test
+
+  build:
+    image: bash
+    depends_on: [install]
+    commands:
+      - source .ci-env
+      - bun run build
+
+  e2e:
+    image: bash
+    depends_on: [build]
+    environment:
+      CI: "true"
+    commands:
+      - source .ci-env
+      - PLAYWRIGHT_WORKERS=$(nproc)
+      - if [ "$PLAYWRIGHT_WORKERS" -gt 4 ]; then PLAYWRIGHT_WORKERS=4; fi
+      - export PLAYWRIGHT_WORKERS
+      - bun run test:e2e

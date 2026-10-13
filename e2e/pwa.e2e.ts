@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const build = (dir: "a" | "b") => JSON.parse(readFileSync(`e2e/.builds/${dir}/version.json`, "utf8")).build as string;
 
