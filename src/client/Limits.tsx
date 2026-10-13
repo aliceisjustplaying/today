@@ -21,6 +21,7 @@ import {
   sortAccounts,
   spendLines,
   statusLabel,
+  tokenLines,
   usageUrl,
   windowTone,
 } from "./limits-format";
@@ -107,7 +108,7 @@ export function Limits() {
 /** `position` is the account's place in display order; privacy mode numbers decoy emails by it. */
 function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount; position: number; now: number; tz: string }) {
   const p = usePrivacy();
-  const spend = spendLines(a);
+  const spend = [...tokenLines(a), ...spendLines(a)];
   const notice = cardNotice(a, now, tz);
   const oldData = hidesOldData(a);
   return (
