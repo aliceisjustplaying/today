@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   ageLabel,
+  apiBalanceRow,
   balanceRow,
   formatDuration,
   formatWallTime,
@@ -25,6 +26,60 @@ import type { LimitsAccount, LimitsWindow } from "./types";
 const now = Date.parse("2026-10-11T12:00:00Z");
 const TZ = "Europe/London";
 const win = (over: Partial<LimitsWindow>): LimitsWindow => ({ window: "5h", usedPercent: 10, resetsAt: null, projection: null, ...over });
+
+describe("Claude API balances", () => {
+  const first = Date.parse("2026-10-16T22:30:00Z");
+  const last = Date.parse("2026-11-17T12:00:00Z");
+  const grant = (remainingUsd: number, grantedUsd: number, expiresAt: number | null) => ({ remainingUsd, grantedUsd, expiresAt });
+  const balance = (grants: NonNullable<NonNullable<LimitsAccount["apiBalance"]>["balance"]>["grants"]) => ({
+    remainingUsd: grants.reduce((sum, g) => sum + g.remainingUsd, 0),
+    grantedUsd: grants.reduce((sum, g) => sum + g.grantedUsd, 0),
+    expiresAt: last,
+    grants,
+  });
+
+  test("multiple grants show totals and only earlier expirations in the user's time zone", () => {
+    const b = balance([grant(200, 200, last), grant(199.35, 200, first)]);
+    expect(apiBalanceRow(b, now, "Europe/Stockholm")).toEqual({
+      amount: "$399.35 of $400 left",
+      details: ["$199.35 expires Oct 17"],
+    });
+    expect(apiBalanceRow(b, now, "America/New_York")?.details).toEqual(["$199.35 expires Oct 16"]);
+  });
+
+  test("one grant has a reset date when known and trims whole-dollar decimals", () => {
+    expect(apiBalanceRow(balance([grant(200, 200, last)]), now, TZ)).toEqual({ amount: "$200 of $200 left", details: ["resets Nov 17"] });
+    expect(apiBalanceRow(balance([grant(199.3, 200, null)]), now, TZ)).toEqual({ amount: "$199.30 of $200 left", details: [] });
+    expect(apiBalanceRow(balance([grant(199.345, 200, null)]), now, TZ)?.amount).toBe("$199.35 of $200 left");
+  });
+
+  test("expiration removes grants and recomputes totals without changing the snapshot", () => {
+    const b = balance([grant(199.35, 200, first), grant(200, 200, last)]);
+    expect(apiBalanceRow(b, first, TZ)).toEqual({ amount: "$200 of $200 left", details: ["resets Nov 17"] });
+    expect(apiBalanceRow(b, last, TZ)).toBeNull();
+    expect(b.remainingUsd).toBe(399.35);
+    expect(b.grants).toHaveLength(2);
+    expect(apiBalanceRow(balance([]), now, TZ)).toBeNull();
+  });
+
+  test("equal expirations keep both grants in totals without an earlier-expiring or reset line", () => {
+    expect(apiBalanceRow(balance([grant(199.35, 200, last), grant(200, 200, last)]), now, TZ)).toEqual({
+      amount: "$399.35 of $400 left",
+      details: [],
+    });
+  });
+
+  test("earlier grants are ordered by expiration and an undated grant stays in the total", () => {
+    expect(apiBalanceRow(balance([grant(200, 200, last), grant(199.35, 200, first), grant(50, 50, null)]), now, "Europe/Stockholm")).toEqual({
+      amount: "$449.35 of $450 left",
+      details: ["$199.35 expires Oct 17", "$200 expires Nov 17"],
+    });
+  });
+
+  test("zero remaining credit is still a balance", () => {
+    expect(apiBalanceRow(balance([grant(0, 200, last)]), now, TZ)?.amount).toBe("$0 of $200 left");
+  });
+});
 
 describe("limits formatting", () => {
   test("durations", () => {

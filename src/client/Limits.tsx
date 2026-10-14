@@ -8,6 +8,7 @@ import { reloadIfStale, supersededByDeploy } from "./updates";
 import { decoyPlanDate, usePrivacy } from "./privacy";
 import {
   ageLabel,
+  apiBalanceRow,
   balanceRow,
   cardNotice,
   hidesOldData,
@@ -143,7 +144,40 @@ function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount
         </ul>
       )}
       {!oldData && spend.length > 0 && <p className="limits-spend">{p.figures(spend.join(" · "))}</p>}
+      {a.provider === "claude" && a.apiBalance && <ApiBalance api={a.apiBalance} now={now} tz={tz} />}
     </section>
+  );
+}
+
+function ApiBalance({ api, now, tz }: { api: NonNullable<LimitsAccount["apiBalance"]>; now: number; tz: string }) {
+  const p = usePrivacy();
+  const [clock, setClock] = useState(now);
+  const currentNow = Math.max(now, clock, Date.now());
+  useEffect(() => {
+    if (api.status === "expired" || !api.balance) return;
+    const next = Math.min(...api.balance.grants.flatMap((g) => g.expiresAt != null && g.expiresAt > currentNow ? [g.expiresAt] : []));
+    if (!Number.isFinite(next)) return;
+    const timer = window.setTimeout(() => setClock(Date.now()), Math.min(next - currentNow, 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [api, currentNow]);
+
+  const row = api.status === "expired" || !api.balance ? null : apiBalanceRow(api.balance, currentNow, tz);
+  if (api.status === "ok" && !row) return null;
+  return (
+    <div className="limits-api-balance" data-status={api.status}>
+      <span className="limits-name-row">
+        <span className="limits-balance-name">API balance</span>
+        {api.status === "expired" && <span className="limits-status limits-status--expired">{statusLabel(api)}</span>}
+      </span>
+      {row && (
+        <span className="limits-balance-amount num">
+          {api.status === "error" && <span className="limits-age limits-age--stale">stale </span>}
+          {p.text(row.amount)}
+        </span>
+      )}
+      {row?.details.map((detail, i) => <span key={i} className="limits-balance-detail num">{p.text(detail)}</span>)}
+      {api.status === "error" && api.notice && <p className="limits-error">{p.text(api.notice)}</p>}
+    </div>
   );
 }
 
