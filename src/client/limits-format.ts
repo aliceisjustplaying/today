@@ -143,6 +143,26 @@ export function isBalanceOnly(a: LimitsAccount): boolean {
   return a.windows.length === 0 && a.status !== "error" && Boolean(a.balanceUsd || a.spendUsd);
 }
 
+export function apiBalanceRow(balance: NonNullable<NonNullable<LimitsAccount["apiBalance"]>["balance"]>, now: number, timeZone: string): {
+  amount: string;
+  details: string[];
+} | null {
+  const grants = balance.grants.filter((g) => g.expiresAt == null || g.expiresAt > now);
+  if (!grants.length) return null;
+  const dollars = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\.00$/, "")}`;
+  const date = (at: number) => new Date(at).toLocaleDateString("en-US", { timeZone, month: "short", day: "numeric" });
+  const remaining = grants.reduce((sum, g) => sum + g.remainingUsd, 0);
+  const granted = grants.reduce((sum, g) => sum + g.grantedUsd, 0);
+  const latest = Math.max(...grants.map((g) => g.expiresAt ?? Infinity));
+  const details = grants.length === 1
+    ? (grants[0]!.expiresAt == null ? [] : [`resets ${date(grants[0]!.expiresAt)}`])
+    : grants
+      .filter((g) => g.expiresAt != null && g.expiresAt < latest)
+      .sort((a, b) => a.expiresAt! - b.expiresAt!)
+      .map((g) => `${dollars(g.remainingUsd)} expires ${date(g.expiresAt!)}`);
+  return { amount: `${dollars(remaining)} of ${dollars(granted)} left`, details };
+}
+
 export type BalanceRow = {
   /** Null when the balance can be set but hasn't been: the row shows "set balance" instead. */
   amount: string | null;
@@ -227,7 +247,7 @@ export function cardNotice(a: LimitsAccount, now: number, timeZone: string): str
 }
 
 /** The status pill: a lapsed subscription or a signed-out login is neutral, not a red error. */
-export function statusLabel(a: LimitsAccount): string {
+export function statusLabel(a: Pick<LimitsAccount, "status">): string {
   return a.status === "expired" ? "session expired" : a.status;
 }
 

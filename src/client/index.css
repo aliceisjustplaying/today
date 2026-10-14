@@ -1665,6 +1665,24 @@ a {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.limits-api-balance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 7px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 18px;
+}
+.limits-api-balance .limits-balance-amount {
+  grid-column: 2;
+}
+.limits-api-balance .limits-balance-detail,
+.limits-api-balance .limits-error {
+  grid-column: 1 / -1;
+}
 .limits-balance-form {
   grid-column: 2 / -1;
   grid-row: auto;
