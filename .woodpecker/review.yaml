@@ -1,5 +1,9 @@
 skip_clone: true
 
+labels:
+  backend: local
+  platform: linux/amd64
+
 when:
   - event: pull_request
   - event: pull_request_metadata
@@ -11,7 +15,7 @@ steps:
     environment:
       GH_TOKEN:
         from_secret: pr_review_github_token
-      CPA_REVIEW_KEY:
-        from_secret: pr_review_cpa_key
+      REVIEW_MODEL_KEY:
+        from_secret: pr_review_model_key
     commands:
       - pr-review
