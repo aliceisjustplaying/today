@@ -103,7 +103,7 @@ export const STALE_AFTER_MS = 60 * MINUTE;
 
 /** `observedAt` is the last successful poll (limits writes snapshots only on success). Inactive accounts aren't polled for fresh data, so they never go stale. */
 export function isStale(a: LimitsAccount, now: number): boolean {
-  return a.observedAt != null && a.status !== "inactive" && now - a.observedAt > STALE_AFTER_MS;
+  return Boolean(a.stale) || (a.observedAt != null && a.status !== "inactive" && now - a.observedAt > STALE_AFTER_MS);
 }
 
 /** An inactive account whose latest poll brought no data (a Claude 429, a lapsed plan): what limits still holds is from before, so the card leaves it out. */
@@ -116,7 +116,7 @@ export function ageLabel(a: LimitsAccount, now: number): string {
   if (a.observedAt == null) return a.status === "pending" ? "waiting" : "no data";
   const ago = now - a.observedAt;
   if (ago < MINUTE) return "now";
-  if (ago < 60 * MINUTE) return formatDuration(ago);
+  if (ago < 60 * MINUTE) return isStale(a, now) ? `stale ${formatDuration(ago)}` : formatDuration(ago);
   const age = ago < 2 * DAY ? `${Math.floor(ago / (60 * MINUTE))}h` : formatDuration(ago);
   return isStale(a, now) ? `stale ${age}` : age;
 }
