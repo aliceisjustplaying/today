@@ -129,6 +129,7 @@ export type LimitsAccount = {
   availableAt?: number | null;
   lastAttemptAt: number | null;
   observedAt: number | null;
+  stale?: boolean;
   windows: LimitsWindow[];
   credits?: { balance: number | null; unlimited: boolean; burn: LimitsBurn | null } | null;
   balanceUsd?: { balance: number; burn: LimitsBurn | null } | null;
