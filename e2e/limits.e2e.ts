@@ -80,6 +80,34 @@ test("each Claude account renders its own API balance below its usage", async ({
   await testInfo.attach("Claude API balances", { path: screenshot, contentType: "image/png" });
 });
 
+test("configured renewal and end dates sit in each card's plan chip", async ({ page }, testInfo) => {
+  const plan = (name: string) => ({ name, status: "active", renewsAt: null, canceledAt: null });
+  await openLimits(page, [
+    account("hi", { email: "hi@example.com", plan: plan("Max 20x"), renewal: { kind: "renews", date: "2026-10-14" } }),
+    account("cloud", { email: "cloud@example.com", plan: plan("Max 5x"), renewal: { kind: "ends", date: "2027-04-13" } }),
+    account("paint", { email: "paint@example.com", plan: plan("Max 5x"), renewal: { kind: "ends", date: "2026-11-18" } }),
+    account("codex", { provider: "codex", label: "Codex", email: "k@example.com", plan: plan("Pro"), renewal: { kind: "renews", date: "2026-10-15" } }),
+    account("codex-free", { provider: "codex", label: "Codex", email: "free@example.com", plan: plan("Free") }),
+    account("grok", { provider: "grok", label: "SuperGrok", email: "g@example.com", plan: plan("SuperGrok"), renewal: { kind: "renews", date: "2026-10-17" } }),
+    account("acs", { provider: "acs", label: "ACS", email: "a@example.com", renewal: { kind: "renews", date: "2026-11-01" } }),
+  ]);
+  const chips = page.locator(".limits-card .limits-plan");
+  await expect(chips).toHaveText([
+    "Max 20x · renews Oct 14",
+    "Max 5x · ends Apr 13, 2027",
+    "Max 5x · ends Nov 18",
+    "Pro · renews Oct 15",
+    "Free",
+    "renews Oct 17",
+    "renews Nov 1",
+  ]);
+  const screenshot = testInfo.outputPath("renewals.png");
+  await page.clock.resume();
+  await expect(page.locator(".limits")).toHaveCSS("opacity", "1");
+  await page.locator(".limits").screenshot({ path: screenshot });
+  await testInfo.attach("Renewal dates", { path: screenshot, contentType: "image/png" });
+});
+
 test("missing, null and empty successful balances render nothing", async ({ page }) => {
   await openLimits(page, [
     account("missing"),

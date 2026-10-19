@@ -71,5 +71,7 @@ describe("privacy decoys", () => {
     expect(chip).toBe(`Lite · ends ${decoy("date", "capy:org")}`);
     expect(decoyPlanDate("Pro · renews Nov 1", "capy:org")).toBe(`Pro · renews ${decoy("date", "capy:org")}`);
     expect(decoyPlanDate("Max 20x", "claude:max")).toBe("Max 20x");
+    expect(decoyPlanDate("renews Nov 1", "acs:main")).toBe(`renews ${decoy("date", "acs:main")}`);
+    expect(decoyPlanDate("Max 5x · ends Apr 13, 2027", "claude:gift")).toBe(`Max 5x · ends ${decoy("date", "claude:gift")}`);
   });
 });

@@ -291,24 +291,40 @@ describe("limits formatting", () => {
       title: "$29.20 used of $1,120.00 · $29.20 this month",
       sources: ["Credit grant · $90.80 of $100.00 left", "Credit grant · $1,000.00 of $1,000.00 left"],
     });
-    expect(planChip(capy, TZ)).toBe("Lite · ends Oct 16");
-    expect(planChip({ ...capy, plan: { ...plan, canceledAt: null } }, TZ)).toBe("Lite · renews Oct 16");
+    expect(planChip(capy, now, TZ)).toBe("Lite · ends Oct 16");
+    expect(planChip({ ...capy, plan: { ...plan, canceledAt: null } }, now, TZ)).toBe("Lite · renews Oct 16");
   });
 
   test("plan chips use the upstream's name, flag a lapsed plan, and stay off when unknown", () => {
     const plan = (name: string, status = "active", renewsAt: number | null = null) => ({ name, status, renewsAt, canceledAt: null });
-    expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }), TZ)).toBe("Max 20x");
-    expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }), TZ)).toBe("SuperGrok");
-    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }), TZ)).toBeNull();
-    expect(planChip(acct({ provider: "muse", label: "Muse", plan: plan("Muse Code Power Usage") }), TZ)).toBe("Power Usage");
-    expect(planChip(acct({ provider: "claude", plan: plan("Muse Code Power Usage") }), TZ)).toBe("Muse Code Power Usage");
-    expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }), TZ)).toBe("Go");
-    expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }), TZ)).toBe("Go inactive");
+    expect(planChip(acct({ provider: "claude", plan: plan("Max 20x") }), now, TZ)).toBe("Max 20x");
+    expect(planChip(acct({ provider: "grok", label: "Grok", plan: plan("SuperGrok") }), now, TZ)).toBe("SuperGrok");
+    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok") }), now, TZ)).toBeNull();
+    expect(planChip(acct({ provider: "muse", label: "Muse", plan: plan("Muse Code Power Usage") }), now, TZ)).toBe("Power Usage");
+    expect(planChip(acct({ provider: "claude", plan: plan("Muse Code Power Usage") }), now, TZ)).toBe("Muse Code Power Usage");
+    expect(planChip(acct({ provider: "opencode-go", status: "inactive", plan: plan("Go", "inactive") }), now, TZ)).toBe("Go");
+    expect(planChip(acct({ provider: "opencode-go", plan: plan("Go", "inactive") }), now, TZ)).toBe("Go inactive");
     // Zen's row never wears the Go subscription's chip; Go has its own card.
-    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }), TZ)).toBeNull();
-    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "inactive") }), TZ)).toBeNull();
-    expect(planChip(acct({ plan: null }), TZ)).toBeNull();
-    expect(planChip(acct({}), TZ)).toBeNull();
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "active", Date.parse("2026-11-01T00:00:00Z")) }), now, TZ)).toBeNull();
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go", "inactive") }), now, TZ)).toBeNull();
+    expect(planChip(acct({ plan: null }), now, TZ)).toBeNull();
+    expect(planChip(acct({}), now, TZ)).toBeNull();
+  });
+
+  test("a configured renewal takes the chip's date, adds the year only when it isn't this year, and stands alone without a plan", () => {
+    const plan = (name: string, status = "active", renewsAt: number | null = null) => ({ name, status, renewsAt, canceledAt: null });
+    const renews = (date: string) => ({ kind: "renews" as const, date });
+    const ends = (date: string) => ({ kind: "ends" as const, date });
+    expect(planChip(acct({ plan: plan("Max 20x"), renewal: renews("2026-11-14") }), now, TZ)).toBe("Max 20x · renews Nov 14");
+    expect(planChip(acct({ plan: plan("Max 5x"), renewal: ends("2027-04-13") }), now, TZ)).toBe("Max 5x · ends Apr 13, 2027");
+    expect(planChip(acct({ provider: "acs", label: "ACS", renewal: renews("2026-11-01") }), now, TZ)).toBe("renews Nov 1");
+    expect(planChip(acct({ provider: "grok", label: "SuperGrok", plan: plan("SuperGrok"), renewal: renews("2026-10-17") }), now, TZ)).toBe("renews Oct 17");
+    // A calendar date: the last day of the year stays Dec 31 even where it's already Jan 1.
+    expect(planChip(acct({ renewal: ends("2026-12-31") }), Date.parse("2026-12-31T23:30:00Z"), "Asia/Tokyo")).toBe("ends Dec 31, 2026");
+    expect(planChip(acct({ renewal: ends("2026-12-31") }), Date.parse("2026-12-31T23:30:00Z"), "America/New_York")).toBe("ends Dec 31");
+    expect(planChip(acct({ plan: plan("Pro", "active", Date.parse("2026-11-01T00:00:00Z")), renewal: renews("2026-10-15") }), now, TZ)).toBe("Pro · renews Oct 15");
+    expect(planChip(acct({ status: "inactive", plan: plan("Go", "inactive"), renewal: renews("2026-10-15") }), now, TZ)).toBe("Go");
+    expect(planChip(acct({ provider: "opencode", plan: plan("Go"), renewal: renews("2026-10-15") }), now, TZ)).toBe("renews Oct 15");
   });
 
   test("typed balances parse as dollars", () => {

@@ -152,6 +152,8 @@ export type LimitsAccount = {
   balanceSettable?: boolean;
   /** The subscription as the upstream names it ("Max 20x", "Pro", "SuperGrok", "Muse Code Power Usage", "Go", "Capy Lite"); null when it doesn't say. */
   plan?: { name: string; status: string; renewsAt: number | null; canceledAt: number | null } | null;
+  /** From limits' config: the next renewal or a fixed end that hasn't passed, a calendar date (YYYY-MM-DD); null or absent when none is set. */
+  renewal?: { kind: "renews" | "ends"; date: string } | null;
   /** Capy with a web session: the billing page's plan, totals and credit sources, in dollars. */
   billing?: {
     remainingUsd: number;
