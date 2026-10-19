@@ -101,7 +101,7 @@ export function Limits() {
       {cards.map((a, i) => (
         <AccountCard key={a.id} account={a} position={i} now={now} tz={tz} />
       ))}
-      {balances.length > 0 && <Balances accounts={sortedBalances} firstPosition={cards.length} onChanged={load} tz={tz} />}
+      {balances.length > 0 && <Balances accounts={sortedBalances} firstPosition={cards.length} onChanged={load} now={now} tz={tz} />}
     </div>
   );
 }
@@ -122,7 +122,7 @@ function AccountCard({ account: a, position, now, tz }: { account: LimitsAccount
           <UsageLink provider={a.provider} label={a.label}>
             <h2 className="limits-name">{a.label}</h2>
           </UsageLink>
-          <PlanChip account={a} tz={tz} />
+          <PlanChip account={a} now={now} tz={tz} />
           {a.status === "ok" || a.status === "pending" ? (
             <span className={`limits-dot limits-dot--${a.status}`} role="img" aria-label={a.status} />
           ) : (
@@ -206,9 +206,9 @@ function UsageLink({ provider, label, logo, children }: { provider: string; labe
   );
 }
 
-function PlanChip({ account, tz }: { account: LimitsAccount; tz: string }) {
+function PlanChip({ account, now, tz }: { account: LimitsAccount; now: number; tz: string }) {
   const p = usePrivacy();
-  const chip = planChip(account, tz);
+  const chip = planChip(account, now, tz);
   return chip ? <span className="limits-plan">{p.on ? decoyPlanDate(chip, account.id) : chip}</span> : null;
 }
 
@@ -300,11 +300,13 @@ function Balances({
   accounts,
   firstPosition,
   onChanged,
+  now,
   tz,
 }: {
   accounts: LimitsAccount[];
   firstPosition: number;
   onChanged: () => Promise<void>;
+  now: number;
   tz: string;
 }) {
   const p = usePrivacy();
@@ -325,7 +327,7 @@ function Balances({
                 <UsageLink provider={a.provider} label={a.label}>
                   <span className="limits-balance-name">{a.label}</span>
                 </UsageLink>
-                <PlanChip account={a} tz={tz} />
+                <PlanChip account={a} now={now} tz={tz} />
               </span>
               {editing === a.id ? (
                 <BalanceEdit

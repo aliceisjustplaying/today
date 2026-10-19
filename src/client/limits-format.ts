@@ -254,20 +254,35 @@ export function statusLabel(a: Pick<LimitsAccount, "status">): string {
 /** The provider's name at the front of its plan names ("Capy Lite", "Muse Code Power Usage"), dropped from the chip. */
 const PLAN_PREFIXES: Record<string, RegExp> = { capy: /^Capy\s+/, muse: /^Muse Code\s+/ };
 
+/** A configured renewal: "renews Nov 15", or "ends Apr 13, 2027" when it isn't this year. The date is a calendar day, so it isn't shifted by `timeZone`. */
+function renewalLabel(renewal: NonNullable<LimitsAccount["renewal"]>, now: number, timeZone: string): string {
+  const thisYear = renewal.date.slice(0, 4) === dayIn(now, timeZone).slice(0, 4);
+  const date = new Date(`${renewal.date}T00:00:00Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    ...(thisYear ? {} : { year: "numeric" }),
+  });
+  return `${renewal.kind} ${date}`;
+}
+
 /**
- * The plan chip beside the name: "Max 20x", "Go inactive", "Lite · renews Oct 16", or "Lite · ends Oct 16" once canceled. Null when unknown or
- * when it would only repeat the name; an inactive card's pill already says the plan lapsed.
+ * The plan chip beside the name: "Max 20x", "Go inactive", "Lite · renews Oct 16", or "Lite · ends Oct 16" once canceled. A renewal set in
+ * limits' config takes the date's place, and stands alone ("renews Nov 1") when there's no plan name to show. Null when there's nothing
+ * but the name again; an inactive card's pill already says the plan lapsed.
  */
-export function planChip(a: LimitsAccount, timeZone: string): string | null {
-  const plan = a.plan;
+export function planChip(a: LimitsAccount, now: number, timeZone: string): string | null {
   // The OpenCode console's plan is the Go subscription, which has its own card; Zen is credits.
-  if (!plan || a.provider === "opencode") return null;
+  const plan = a.provider === "opencode" ? null : a.plan;
+  const renewal = a.renewal ? renewalLabel(a.renewal, now, timeZone) : null;
+  if (!plan) return renewal;
   const prefix = PLAN_PREFIXES[a.provider];
   const name = prefix ? plan.name.replace(prefix, "") : plan.name;
   if (plan.status !== "active") return a.status === "inactive" ? name : `${name} ${plan.status}`;
-  if (name === a.label) return null;
-  if (plan.renewsAt == null) return name;
   // A canceled plan stays active until its period ends, so the date is when it ends, not a renewal.
-  const verb = plan.canceledAt != null ? "ends" : "renews";
-  return `${name} · ${verb} ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone, month: "short", day: "numeric" })}`;
+  const date = renewal ?? (plan.renewsAt == null
+    ? null
+    : `${plan.canceledAt != null ? "ends" : "renews"} ${new Date(plan.renewsAt).toLocaleDateString("en-US", { timeZone, month: "short", day: "numeric" })}`);
+  const parts = [name === a.label ? null : name, date].filter((part) => part != null);
+  return parts.length ? parts.join(" · ") : null;
 }

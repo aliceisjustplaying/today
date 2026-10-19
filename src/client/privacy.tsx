@@ -136,9 +136,9 @@ export function decoyEach(kind: DecoyKind, seeds: (string | number)[]): string[]
   });
 }
 
-/** Keeps a plan chip's name but swaps its renewal or end date ("Lite · ends Nov 14"). */
+/** Keeps a plan chip's name but swaps its renewal or end date ("Lite · ends Nov 14", "renews Oct 3"). */
 export function decoyPlanDate(chip: string, seed: string): string {
-  return chip.replace(/ · (renews|ends) .*$/, (_, verb: string) => ` · ${verb} ${decoy("date", seed)}`);
+  return chip.replace(/(^| · )(renews|ends) .*$/, (_, lead: string, verb: string) => `${lead}${verb} ${decoy("date", seed)}`);
 }
 
 /** Swaps emails and dollar amounts inside text that otherwise stays (notices, errors, tooltips). */
