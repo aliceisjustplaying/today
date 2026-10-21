@@ -12,7 +12,7 @@
  *
  * Budget: a refresh at most every POLL_MS. Every request is conditional (If-None-Match), and a
  * 304 is free. A repo's events are polled no sooner than its X-Poll-Interval allows, and its
- * forks and star history are only refetched when its fork or star count moved. Any failure on
+ * forks are polled conditionally and star history is refetched when its star count moved. Any failure on
  * one repo's source is skipped and never breaks the rest of the feed.
  */
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
@@ -27,7 +27,7 @@ const MAX_EVENTS = 200;
 const PER_PAGE = 100;
 /** Event pages read on a repo's first poll, and at most after that when a whole page is new. */
 const EVENT_PAGES = 3;
-const NAME_LOOKUPS_PER_REFRESH = { anonymous: 10, token: 80 };
+const NAME_LOOKUPS_PER_REFRESH = 80;
 const CONCURRENCY = 6;
 
 export type GithubEvent = {
@@ -64,7 +64,7 @@ export class GithubUnavailable extends Error {
 
 type Fetch = typeof fetch;
 type Page = { body: unknown; pollSeconds: number | null; changed: boolean };
-export type RepoMemo = { stars: number; forks: number; pollAfter: number; starDays: Map<number, number> | null; starDaysAt: number };
+export type RepoMemo = { stars: number; pollAfter: number; starDays: Map<number, number> | null; starDaysAt: number };
 
 /** One feed per user and token; the server keeps a single instance. */
 export class GithubSource {
@@ -78,7 +78,7 @@ export class GithubSource {
   constructor(
     private db: DB,
     private user: string,
-    private token: string | undefined,
+    private token: string,
     private fetchImpl: Fetch = fetch,
   ) {}
 
@@ -104,7 +104,7 @@ export class GithubSource {
     let read = 0;
     let failed = 0;
     await pool(repos, CONCURRENCY, async (repo) => {
-      const memo = this.memo.get(repo.name) ?? { stars: -1, forks: -1, pollAfter: 0, starDays: null, starDaysAt: 0 };
+      const memo = this.memo.get(repo.name) ?? { stars: -1, pollAfter: 0, starDays: null, starDaysAt: 0 };
       this.memo.set(repo.name, memo);
       if (now >= memo.pollAfter) {
         try {
@@ -114,13 +114,10 @@ export class GithubSource {
           failed++;
         }
       }
-      if (memo.forks !== repo.forks) {
-        try {
-          if (repo.forks > 0) await this.pollForks(repo);
-          memo.forks = repo.forks;
-        } catch {
-          /* forks stay as stored */
-        }
+      try {
+        if (repo.forks > 0) await this.pollForks(repo, now);
+      } catch {
+        /* forks stay as stored */
       }
       if (memo.stars !== repo.stars) {
         try {
@@ -202,17 +199,17 @@ export class GithubSource {
         ? new Set((await this.db.select({ id: githubEvents.id }).from(githubEvents).where(inArray(githubEvents.id, stars.map((e) => e.id)))).map((r) => r.id))
         : new Set<string>();
       const unknown = stars.filter((e) => !known.has(e.id));
-      const starred = unknown.length
-        ? new Set(
+      const backfilled = unknown.length
+        ? new Map(
             (
               await this.db
-                .select({ login: githubEvents.login })
+                .select({ id: githubEvents.id, at: githubEvents.at })
                 .from(githubEvents)
-                .where(and(eq(githubEvents.kind, "star"), eq(githubEvents.repo, repo.name), inArray(githubEvents.login, unknown.map((e) => e.actor.login))))
-            ).map((r) => r.login),
+                .where(inArray(githubEvents.id, unknown.map((e) => `web:${repo.name}:${e.actor.login}`)))
+            ).map((r) => [r.id, pacificDay(r.at)]),
           )
-        : new Set<string>();
-      const fresh = unknown.filter((e) => !starred.has(e.actor.login));
+        : new Map<string, number>();
+      const fresh = unknown.filter((e) => backfilled.get(`web:${repo.name}:${e.actor.login}`) !== pacificDay(Date.parse(e.created_at)));
       if (fresh.length) {
         await this.db
           .insert(githubEvents)
@@ -220,20 +217,28 @@ export class GithubSource {
           .onConflictDoNothing();
       }
       const reachedKnown = known.size > 0;
-      if (events.length < PER_PAGE || (!first && reachedKnown) || (!first && stars.length === 0)) break;
+      if (events.length < PER_PAGE || (!first && reachedKnown)) break;
     }
     return interval;
   }
 
-  private async pollForks(repo: GithubRepo): Promise<void> {
-    const { body, changed } = await this.get_(`/repos/${encodeURIComponent(this.user)}/${encodeURIComponent(repo.name)}/forks?sort=newest&per_page=${PER_PAGE}`);
-    if (!changed) return;
-    const forks = (body as { id: number; created_at: string; owner: { login: string; avatar_url: string } }[]).filter((f) => !this.isOwner(f.owner.login));
-    if (!forks.length) return;
-    await this.db
-      .insert(githubEvents)
-      .values(forks.map((f) => ({ id: `fork:${f.id}`, kind: "fork" as const, repo: repo.name, login: f.owner.login, avatarUrl: f.owner.avatar_url, at: Date.parse(f.created_at) })))
-      .onConflictDoNothing();
+  private async pollForks(repo: GithubRepo, now: number): Promise<void> {
+    const since = now - WINDOW_MS;
+    for (let page = 1; page <= Math.ceil(MAX_EVENTS / PER_PAGE); page++) {
+      const { body, changed } = await this.get_(`/repos/${encodeURIComponent(this.user)}/${encodeURIComponent(repo.name)}/forks?sort=newest&per_page=${PER_PAGE}&page=${page}`);
+      if (!changed) break;
+      const forks = body as { id: number; created_at: string; owner: { login: string; avatar_url: string } }[];
+      if (!forks.length) break;
+      const known = await this.db.select({ id: githubEvents.id }).from(githubEvents).where(inArray(githubEvents.id, forks.map((f) => `fork:${f.id}`)));
+      const recent = forks.filter((f) => !this.isOwner(f.owner.login) && Date.parse(f.created_at) >= since);
+      if (recent.length) {
+        await this.db
+          .insert(githubEvents)
+          .values(recent.map((f) => ({ id: `fork:${f.id}`, kind: "fork" as const, repo: repo.name, login: f.owner.login, avatarUrl: f.owner.avatar_url, at: Date.parse(f.created_at) })))
+          .onConflictDoNothing();
+      }
+      if (forks.length < PER_PAGE || known.length || Date.parse(forks[forks.length - 1]!.created_at) < since) break;
+    }
   }
 
   /**
@@ -255,8 +260,7 @@ export class GithubSource {
     const logins = recent.map((r) => r.login);
     if (!logins.length) return;
     const known = new Set((await this.db.select({ login: githubUsers.login }).from(githubUsers).where(inArray(githubUsers.login, logins))).map((u) => u.login));
-    const budget = this.token ? NAME_LOOKUPS_PER_REFRESH.token : NAME_LOOKUPS_PER_REFRESH.anonymous;
-    await pool(logins.filter((l) => !known.has(l)).slice(0, budget), CONCURRENCY, async (login) => {
+    await pool(logins.filter((l) => !known.has(l)).slice(0, NAME_LOOKUPS_PER_REFRESH), CONCURRENCY, async (login) => {
       try {
         const { body } = await this.get_(`/users/${encodeURIComponent(login)}`);
         const name = (body as { name?: string | null }).name?.trim() || null;
@@ -274,8 +278,8 @@ export class GithubSource {
       Accept: "application/vnd.github+json",
       "User-Agent": "today-dashboard",
       "X-GitHub-Api-Version": "2022-11-28",
+      Authorization: `Bearer ${this.token}`,
     };
-    if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (cached) headers["If-None-Match"] = cached.etag;
 
     let res: Response;
@@ -356,8 +360,8 @@ async function pool<T>(items: T[], size: number, fn: (item: T) => Promise<void>)
 let shared: { key: string; source: GithubSource } | null = null;
 
 /** The process-wide source, so the poll state and ETags survive across requests. */
-export function githubSource(db: DB, user: string, token: string | undefined): GithubSource {
-  const key = `${user}\n${token ?? ""}`;
+export function githubSource(db: DB, user: string, token: string): GithubSource {
+  const key = `${user}\n${token}`;
   if (shared?.key !== key) shared = { key, source: new GithubSource(db, user, token) };
   return shared.source;
 }

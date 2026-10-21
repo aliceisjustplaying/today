@@ -5,6 +5,7 @@ const REQUIRED = [
   "GOOGLE_OAUTH_CLIENT_ID",
   "GOOGLE_OAUTH_CLIENT_SECRET",
   "SESSION_SECRET",
+  "GITHUB_TOKEN",
 ] as const;
 
 export type Config = {
@@ -20,7 +21,7 @@ export type Config = {
   LINEAR_TABS: TabConfig[];
   LIMITS_URL: string;
   GITHUB_USER: string;
-  GITHUB_TOKEN?: string;
+  GITHUB_TOKEN: string;
   TIMEZONE: string;
   TRANSPORT_DEFAULT: string;
   TRANSPORT_RESCUE: string;
@@ -60,7 +61,7 @@ export function loadConfig(env: EnvSource = process.env): Config {
     LINEAR_TABS: parseTabs(value("LINEAR_TABS")),
     LIMITS_URL: value("LIMITS_URL") ?? "http://127.0.0.1:8790",
     GITHUB_USER: value("GITHUB_USER") ?? "aliceisjustplaying",
-    GITHUB_TOKEN: value("GITHUB_TOKEN"),
+    GITHUB_TOKEN: value("GITHUB_TOKEN")!,
     TIMEZONE: value("TIMEZONE") ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     TRANSPORT_DEFAULT: value("TRANSPORT_DEFAULT") ?? "TRANSIT",
     TRANSPORT_RESCUE: value("TRANSPORT_RESCUE") ?? "DRIVE",

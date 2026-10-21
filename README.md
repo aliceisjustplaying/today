@@ -8,14 +8,14 @@ today is a small web app for your phone. It shows what is next on your calendar,
 - **A Google OAuth client** for sign-in. It also reads your Google Calendar (read only).
 - **A Google Routes API key** and a home address, if you want travel times. This part is optional.
 - **A Linear API key** for each Linear workspace you use.
-- **GitHub** for the Stars tab. A read-only token is optional but keeps it well under the rate limit.
+- **GitHub** for the Stars tab. A read-only token is required for automatic polling.
 - **The limits service** (in its own repo) for the Limits tab. limits reads Claude, Codex and Grok through CLIProxyAPI. This part is optional.
 
 `docs/SETUP.md` walks through each account step by step.
 
 ## Settings
 
-Put these in `.env` (copy `.env.example`). Only the first five are required.
+Put these in `.env` (copy `.env.example`). The first five and `GITHUB_TOKEN` are required.
 
 | Name | Default | What it does |
 | --- | --- | --- |
@@ -36,7 +36,7 @@ Put these in `.env` (copy `.env.example`). Only the first five are required.
 | `TIMEZONE` | the server's zone | Your time zone, like `America/New_York`; sets when a day starts |
 | `LIMITS_URL` | `http://127.0.0.1:8790` | Where the limits service runs |
 | `GITHUB_USER` | `aliceisjustplaying` | Whose public repos fill the Stars tab |
-| `GITHUB_TOKEN` | | Optional GitHub token (read-only, public repos, no permissions). It raises the rate limit from 60 to 5,000 calls an hour |
+| `GITHUB_TOKEN` | | Required GitHub token (read-only, public repos, no permissions). It raises the rate limit from 60 to 5,000 calls an hour |
 | `HOST` | `127.0.0.1` | Address to listen on |
 | `PORT` | `8788` | Port to listen on |
 | `DATABASE_PATH` | `data/today.sqlite` | The SQLite file |

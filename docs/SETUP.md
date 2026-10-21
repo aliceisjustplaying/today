@@ -52,6 +52,10 @@ This is the longest section. All in https://console.cloud.google.com.
 
 - v0 will be installable as a PWA from Safari without needing an Apple Developer account. No action needed.
 
+## GitHub
+
+- `GITHUB_TOKEN`: required for automatic polling; read-only, public repos, no permissions.
+
 ## Local environment
 
 After you finish the above, make sure:
@@ -71,6 +75,7 @@ Put these in `.env` locally, or in the server's environment / credentials in pro
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `SESSION_SECRET`
 - `LINEAR_API_KEY`, or `LINEAR_API_KEYS` for several workspaces
+- `GITHUB_TOKEN`
 - `LINEAR_RETURNS_LABEL` (optional, default `Returns`)
 - `GOOGLE_OAUTH_REDIRECT_URI` (production)
 - `GOOGLE_API_KEY` and `HOME_ADDRESS` (travel estimates)
