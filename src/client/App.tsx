@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Me } from "./types";
 import { SignIn } from "./SignIn";
 import { SignedIn } from "./SignedIn";
+import { clearCached } from "./cache";
 
 type AuthState =
   | { kind: "loading" }
@@ -15,7 +16,10 @@ export function App() {
   useEffect(() => {
     fetch("/api/me")
       .then(async (r) => {
-        if (r.status === 401) return setAuth({ kind: "anon" });
+        if (r.status === 401) {
+          clearCached();
+          return setAuth({ kind: "anon" });
+        }
         if (!r.ok) return setAuth({ kind: "error", message: `HTTP ${r.status}` });
         const me = (await r.json()) as Me;
         setAuth({ kind: "signed-in", me });
