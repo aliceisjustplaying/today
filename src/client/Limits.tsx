@@ -82,7 +82,7 @@ export function Limits() {
 
   const now = Date.now();
   const tz = summary.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const balances = summary.accounts.filter((a) => isBalanceOnly(a) && a.status === "ok" && !isStale(a, now));
+  const balances = summary.accounts.filter((a) => isBalanceOnly(a) && a.status === "ok" && (a.balanceSettable || !isStale(a, now)));
   const cards = sortAccounts(summary.accounts.filter((a) => !balances.includes(a)));
   const sortedBalances = sortAccounts(balances);
   return (
@@ -318,6 +318,7 @@ function Balances({
       <ul className="limits-balance-list">
         {accounts.map((a, i) => {
           const { amount, detail, title, sources } = balanceRow(a);
+          const notice = cardNotice(a, now, tz);
           return (
             <li key={a.id} className="limits-balance" data-provider={a.provider} data-status={a.status}>
               <UsageLink provider={a.provider} label={a.label} logo>
@@ -328,6 +329,7 @@ function Balances({
                   <span className="limits-balance-name">{a.label}</span>
                 </UsageLink>
                 <PlanChip account={a} now={now} tz={tz} />
+                <span className="limits-dot limits-dot--ok" role="img" aria-label={a.status} />
               </span>
               {editing === a.id ? (
                 <BalanceEdit
@@ -362,8 +364,9 @@ function Balances({
                 </span>
               )}
               {a.email && <AccountEmail email={a.email} position={firstPosition + i} />}
-              <span className="limits-age num" title="last updated">{ageLabel(a, now)}</span>
+              <span className={`limits-age num${isStale(a, now) ? " limits-age--stale" : ""}`} title="last updated">{ageLabel(a, now)}</span>
               {detail && <span className="limits-balance-detail num">{p.text(detail)}</span>}
+              {notice && <p className="limits-notice">{p.text(notice)}</p>}
               {expanded === a.id && sources && (
                 <ul className="limits-balance-sources">
                   {title && <li>{p.text(title)}</li>}

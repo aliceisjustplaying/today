@@ -1679,6 +1679,9 @@ a {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.limits-balance > .limits-notice {
+  grid-column: 2 / -1;
+}
 .limits-api-balance {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
