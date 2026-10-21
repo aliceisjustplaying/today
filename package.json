@@ -15,7 +15,6 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.98.0",
     "@hono/oauth-providers": "0.8.5",
     "drizzle-orm": "0.45.2",
     "hono": "4.12.23",
