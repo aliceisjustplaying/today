@@ -20,6 +20,7 @@ beforeAll(async () => {
       GOOGLE_OAUTH_CLIENT_SECRET: "client-secret",
       SESSION_SECRET: "session-secret",
       LINEAR_API_KEY: "lin_api_test",
+      GITHUB_TOKEN: "github-test-token",
       TIMEZONE: "Europe/Stockholm",
     }),
     db,
