@@ -1,7 +1,5 @@
 import type { GithubEvent } from "./types";
 
-const DAY = 24 * 60 * 60_000;
-
 /** Three or more stars on one repo, one after another on the same day, collapse into one row. */
 export const BURST_MIN = 3;
 
@@ -14,8 +12,11 @@ function dayKey(ms: number, timeZone: string): string {
 
 /** "Today", "Yesterday", then "Oct 9", by the calendar in `timeZone`. */
 export function dayLabel(key: string, now: number, timeZone: string): string {
-  if (key === dayKey(now, timeZone)) return "Today";
-  if (key === dayKey(now - DAY, timeZone)) return "Yesterday";
+  const today = dayKey(now, timeZone);
+  if (key === today) return "Today";
+  const yesterday = new Date(`${today}T12:00:00Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  if (key === yesterday.toISOString().slice(0, 10)) return "Yesterday";
   return new Date(`${key}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
 }
 
