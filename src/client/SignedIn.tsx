@@ -31,7 +31,7 @@ export function SignedIn() {
     getCached<ReturnsResponse>("returns.linear"),
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
-  const [errors, setErrors] = useState<Partial<Record<"now" | "tasks" | "returns" | "mutation", string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<"now" | "tasks" | "returns" | "prep" | "close", string>>>({});
   const [prepSheet, setPrepSheet] = useState<"edit" | "history" | null>(null);
 
   const loadNow = useCallback(async () => {
@@ -150,8 +150,9 @@ export function SignedIn() {
         });
         if (!r.ok) throw new Error(`prep ${r.status}`);
         applyPrep((await r.json()) as PrepToday);
+        setErrors((prev) => ({ ...prev, prep: undefined }));
       } catch (e) {
-        setErrors((prev) => ({ ...prev, mutation: String(e) }));
+        setErrors((prev) => ({ ...prev, prep: String(e) }));
         loadNow();
       }
     },
@@ -190,9 +191,10 @@ export function SignedIn() {
           return;
         }
         if (!r.ok) throw new Error(`close ${r.status}`);
+        setErrors((prev) => ({ ...prev, close: undefined }));
         await Promise.all([loadTasks(), loadReturns()]);
       } catch (e) {
-        setErrors((prev) => ({ ...prev, mutation: String(e) }));
+        setErrors((prev) => ({ ...prev, close: String(e) }));
       } finally {
         setCompleting((prev) => {
           const next = new Set(prev);

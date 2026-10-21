@@ -102,6 +102,48 @@ for (const mutation of ["prep", "close"] as const) {
   });
 }
 
+for (const mutation of ["prep", "close"] as const) {
+  test(`a successful ${mutation} mutation retry clears only its own error`, async ({ page }, testInfo) => {
+    let recovered: "prep" | "close" | "both" | null = null;
+    let prep = now().prep;
+    let closed = false;
+    await page.route("**/api/now", (route) => route.fulfill({ json: { ...now(), prep } }));
+    await page.route("**/api/tasks", (route) => route.fulfill({ json: tasks(closed) }));
+    await page.route("**/api/returns", (route) => route.fulfill({ json: returns(closed) }));
+    await page.route("**/api/prep", (route) => {
+      if (recovered !== "prep" && recovered !== "both") return route.fulfill({ status: 502 });
+      prep = { ...prep, steps: prep.steps.map((step) => ({ ...step, done: true })), remainingMinutes: 0 };
+      return route.fulfill({ json: prep });
+    });
+    await page.route("**/api/tasks/0/issue-1/close", (route) => {
+      if (recovered !== "close" && recovered !== "both") return route.fulfill({ status: 502 });
+      closed = true;
+      return route.fulfill({ json: { ok: true } });
+    });
+    await page.goto("/");
+    const prepButton = page.getByRole("button", { name: "eat 15m", exact: true });
+    const closeButton = page.getByRole("button", { name: 'mark "Return headphones" as done', exact: true });
+    for (const failed of [mutation === "prep" ? "close" : "prep", mutation]) {
+      await (failed === "prep" ? prepButton : closeButton).click();
+      await expect(page.locator(".error-toast")).toContainText(`Error: ${failed} 502`);
+      if (failed === "prep") await expect(prepButton).toHaveAttribute("aria-pressed", "false");
+    }
+    recovered = mutation;
+    await (mutation === "prep" ? prepButton : closeButton).click();
+    if (mutation === "prep") await expect(prepButton).toHaveAttribute("aria-pressed", "true");
+    else {
+      await expect(page.locator(".task")).toHaveCount(0);
+      await expect(page.locator(".return-item")).toHaveCount(0);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`${mutation}-successful-retry.png`), fullPage: true });
+    await expect(page.locator(".error-toast")).not.toContainText(`Error: ${mutation} 502`);
+    await expect(page.locator(".error-toast")).toHaveText(`Error: ${mutation === "prep" ? "close" : "prep"} 502`);
+    recovered = "both";
+    await (mutation === "prep" ? closeButton : prepButton).click();
+    await expect(page.locator(".error-toast")).toHaveCount(0);
+  });
+}
+
 test("completing a task refreshes its Returns entry and both caches", async ({ page }, testInfo) => {
   let closed = false;
   let returnsRequests = 0;
