@@ -66,6 +66,10 @@ api.get("/sw.js", (c, next) =>
 );
 
 api.get("/auth/google/start", (c) => c.html("<title>Google sign-in</title><h1>Sign in with Google</h1>"));
+api.post("/auth/logout", (c) => {
+  state.signedIn = false;
+  return c.redirect("/auth/google/start", 303);
+});
 
 api.use("/api/*", async (c, next) => {
   if (!state.signedIn) return c.json({ error: "unauthorized" }, 401);

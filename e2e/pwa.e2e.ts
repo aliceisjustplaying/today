@@ -36,6 +36,35 @@ async function openControlled(page: Page) {
   });
 }
 
+async function privateCaches(page: Page) {
+  return page.evaluate(async () => {
+    const urls: string[] = [];
+    for (const key of await caches.keys()) {
+      for (const req of await (await caches.open(key)).keys()) urls.push(new URL(req.url).pathname);
+    }
+    return {
+      localStorage: Object.keys(localStorage).filter((key) => key.startsWith("today.cache.")),
+      cacheStorage: urls.filter((path) => path.startsWith("/api/") || path.startsWith("/auth/")),
+      privacy: localStorage.getItem("today.privacy"),
+    };
+  });
+}
+
+async function openWithPrivateCaches(page: Page) {
+  await openControlled(page);
+  await page.reload();
+  await page.evaluate(() => localStorage.setItem("today.privacy", "true"));
+  await expect.poll(() => privateCaches(page)).toMatchObject({
+    localStorage: expect.arrayContaining([
+      "today.cache.now.v2",
+      "today.cache.tasks.linear.v2",
+      "today.cache.events",
+      "today.cache.returns.linear",
+    ]),
+    cacheStorage: expect.arrayContaining(["/api/me", "/api/now"]),
+  });
+}
+
 const runningBuild = (page: Page) => page.locator('meta[name="today-build"]').getAttribute("content");
 
 test.beforeEach(async ({ request }) => {
@@ -112,19 +141,27 @@ test("a shell whose assets are gone recovers with one reload", async ({ page }) 
 
 test("an expired session on resume goes to sign-in and leaves nothing private cached", async ({ page, request }) => {
   await page.clock.install();
-  await openControlled(page);
+  await openWithPrivateCaches(page);
   await server(request, { signedIn: false });
   // A resume within seconds of the last load doesn't refetch; this one comes back later.
   await page.clock.fastForward(20_000);
   await resume(page);
   await expect(page).toHaveURL(/\/auth\/google\/start$/);
 
-  const cached = await page.evaluate(async () => {
-    const urls: string[] = [];
-    for (const key of await caches.keys()) {
-      for (const req of await (await caches.open(key)).keys()) urls.push(new URL(req.url).pathname);
-    }
-    return urls;
-  });
-  expect(cached.filter((path) => path.startsWith("/api/") || path.startsWith("/auth/"))).toEqual([]);
+  await expect.poll(() => privateCaches(page)).toEqual({ localStorage: [], cacheStorage: [], privacy: "true" });
+});
+
+test("an anonymous initial load leaves nothing private cached", async ({ page, request }) => {
+  await openWithPrivateCaches(page);
+  await server(request, { signedIn: false });
+  await page.reload();
+  await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();
+  await expect.poll(() => privateCaches(page)).toEqual({ localStorage: [], cacheStorage: [], privacy: "true" });
+});
+
+test("explicit logout leaves nothing private cached", async ({ page }) => {
+  await openWithPrivateCaches(page);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/auth\/google\/start$/);
+  await expect.poll(() => privateCaches(page)).toEqual({ localStorage: [], cacheStorage: [], privacy: "true" });
 });

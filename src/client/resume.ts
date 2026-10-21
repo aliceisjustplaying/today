@@ -1,3 +1,5 @@
+import { clearCached } from "./cache";
+
 /**
  * Runs `callback` when the app comes back to the foreground. iOS home-screen apps report a
  * resume through visibilitychange or a bfcache pageshow more reliably than through focus, and
@@ -42,5 +44,6 @@ export function throttle(fn: () => void, gapMs: number, now: () => number = Date
 
 /** The session or the Google grant expired: go through login, without leaving this page in history. */
 export function signInAgain(): void {
+  clearCached();
   window.location.replace("/auth/google/start");
 }
