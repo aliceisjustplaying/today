@@ -82,8 +82,8 @@ export function Limits() {
 
   const now = Date.now();
   const tz = summary.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const balances = summary.accounts.filter(isBalanceOnly);
-  const cards = sortAccounts(summary.accounts.filter((a) => !isBalanceOnly(a)));
+  const balances = summary.accounts.filter((a) => isBalanceOnly(a) && a.status === "ok" && !isStale(a, now));
+  const cards = sortAccounts(summary.accounts.filter((a) => !balances.includes(a)));
   const sortedBalances = sortAccounts(balances);
   return (
     <div className="limits">
@@ -362,6 +362,7 @@ function Balances({
                 </span>
               )}
               {a.email && <AccountEmail email={a.email} position={firstPosition + i} />}
+              <span className="limits-age num" title="last updated">{ageLabel(a, now)}</span>
               {detail && <span className="limits-balance-detail num">{p.text(detail)}</span>}
               {expanded === a.id && sources && (
                 <ul className="limits-balance-sources">
