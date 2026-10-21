@@ -1,4 +1,5 @@
 import type { AppEnv } from "./env";
+import { endOfTomorrowInTz } from "./dates";
 import { getPrepToday, type PrepToday } from "./prep";
 import {
   getValidGoogleAccessToken,
@@ -70,13 +71,10 @@ export async function computeNowState(
   const bufferMinutes = parseInt(env.BUFFER_MINUTES || "10", 10);
 
   const accessToken = await getValidGoogleAccessToken(env, userSub);
-  const endOfTomorrow = new Date(now);
-  endOfTomorrow.setUTCDate(endOfTomorrow.getUTCDate() + 2);
-  endOfTomorrow.setUTCHours(0, 0, 0, 0);
 
   const events = await listAllCalendarEvents(accessToken, {
     timeMin: now,
-    timeMax: endOfTomorrow,
+    timeMax: endOfTomorrowInTz(env.TIMEZONE, now),
   });
   const nextEvent = findNextAnchor(events, now);
 

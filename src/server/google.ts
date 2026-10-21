@@ -172,12 +172,7 @@ export async function listAllCalendarEvents(
 
   const results = await Promise.all(
     visible.map((c) =>
-      listCalendarEvents(accessToken, { ...opts, calendarId: c.id }).catch(
-        (err: unknown) => {
-          if (err instanceof GoogleReauthNeeded) throw err;
-          return [] as CalendarEvent[];
-        },
-      ),
+      listCalendarEvents(accessToken, { ...opts, calendarId: c.id }),
     ),
   );
 
