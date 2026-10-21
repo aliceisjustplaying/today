@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { deleteCookie, getCookie } from "hono/cookie";
+import { HTTPException } from "hono/http-exception";
 import { googleAuth } from "@hono/oauth-providers/google";
 import { and, eq } from "drizzle-orm";
 import { oauthTokens } from "./db/schema";
@@ -10,6 +12,14 @@ const auth = new Hono<Env>();
 auth.get("/google/start", (c) => c.redirect("/auth/google/callback"));
 
 auth.use("/google/callback", async (c, next) => {
+  if (c.req.query("code")) {
+    const state = c.req.query("state");
+    const storedState = getCookie(c, "state");
+    if (!state || !storedState || state !== storedState) {
+      throw new HTTPException(401);
+    }
+  }
+
   const redirect_uri =
     c.env.GOOGLE_OAUTH_REDIRECT_URI ??
     new URL("/auth/google/callback", c.req.url).toString();
@@ -64,6 +74,7 @@ auth.get("/google/callback", async (c) => {
   });
 
   await createSession(c, { userSub: user.id, email: user.email });
+  deleteCookie(c, "state", { path: "/" });
   return c.redirect("/");
 });
 
