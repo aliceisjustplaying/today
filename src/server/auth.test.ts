@@ -19,6 +19,7 @@ beforeEach(() => {
       GOOGLE_OAUTH_CLIENT_SECRET: "fixture-secret",
       SESSION_SECRET: "fixture-session-secret",
       LINEAR_API_KEY: "fixture-linear-key",
+      GITHUB_TOKEN: "fixture-github-token",
     }),
     db,
   };
