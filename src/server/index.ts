@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import auth from "./auth";
 import client from "./static";
 import { sessionMiddleware, requireSession } from "./session";
-import { todayKeyInTz, addDaysToKey } from "./dates";
+import { todayKeyInTz, addDaysToKey, endOfTomorrowInTz } from "./dates";
 import {
   getValidGoogleAccessToken,
   listAllCalendarEvents,
@@ -56,12 +56,9 @@ app.get("/api/events", requireSession, async (c) => {
   try {
     const accessToken = await getValidGoogleAccessToken(c.env, s.userSub);
     const now = new Date();
-    const endOfTomorrow = new Date(now);
-    endOfTomorrow.setUTCDate(endOfTomorrow.getUTCDate() + 2);
-    endOfTomorrow.setUTCHours(0, 0, 0, 0);
     const events = await listAllCalendarEvents(accessToken, {
       timeMin: now,
-      timeMax: endOfTomorrow,
+      timeMax: endOfTomorrowInTz(c.env.TIMEZONE, now),
     });
     const nextAnchor = findNextAnchor(events, now);
     return c.json({ events, nextAnchor });
