@@ -15,6 +15,15 @@ const ev = (iso: string, repo: string, kind: "star" | "fork" = "star", login = r
 });
 
 describe("stars feed", () => {
+  test.each([
+    ["2026-10-25T23:30:00+01:00", "2026-10-24"],
+    ["2026-03-30T00:30:00+02:00", "2026-03-29"],
+    ["2026-11-01T00:30:00+01:00", "2026-10-31"],
+    ["2027-01-01T00:30:00+01:00", "2026-12-31"],
+  ])("Yesterday follows the Stockholm calendar at %s", (iso, yesterday) => {
+    expect(dayLabel(yesterday, Date.parse(iso), "Europe/Stockholm")).toBe("Yesterday");
+  });
+
   test("days are bucketed in the given time zone", () => {
     // 02:00 UTC on the 12th is still the evening of the 11th in New York.
     const days = groupFeed([ev("2026-10-12T15:00:00Z", "a", "fork"), ev("2026-10-12T02:00:00Z", "b", "fork"), ev("2026-10-09T12:00:00Z", "c")], now, TZ);

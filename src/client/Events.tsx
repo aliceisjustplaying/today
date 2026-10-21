@@ -4,10 +4,10 @@ import { fantasticalOpen } from "./urls";
 import { CalendarIcon, ChevronIcon } from "./icons";
 import { usePrivacy } from "./privacy";
 
-function eventStartIso(e: CalendarEvent): string {
-  if (e.start && "dateTime" in e.start) return e.start.dateTime;
+function eventDateKey(e: CalendarEvent): string {
+  if (e.start && "dateTime" in e.start) return new Date(e.start.dateTime).toLocaleDateString("en-CA");
   if (e.start && "date" in e.start) return e.start.date;
-  return new Date().toISOString();
+  return todayKey();
 }
 
 function eventStartTime(e: CalendarEvent): string {
@@ -20,10 +20,6 @@ function eventStartTime(e: CalendarEvent): string {
   }
   if (e.start && "date" in e.start) return "all day";
   return "—";
-}
-
-function dateKey(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-CA");
 }
 
 function todayKey(): string {
@@ -59,7 +55,7 @@ export function Events({ events }: { events: EventsResponse | null }) {
   const tomorrowEvents: CalendarEvent[] = [];
 
   for (const e of events.events) {
-    const k = dateKey(eventStartIso(e));
+    const k = eventDateKey(e);
     if (k === today) todayEvents.push(e);
     else if (k === tomorrow) tomorrowEvents.push(e);
   }
