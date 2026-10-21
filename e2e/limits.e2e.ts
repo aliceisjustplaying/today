@@ -167,3 +167,91 @@ test("a grant expiring between refreshes disappears and totals recompute immedia
   await expect(balance).toHaveCount(0);
   await expect(page.getByRole("progressbar", { name: "5h used" })).toBeVisible();
 });
+
+test("balance-only accounts preserve failures, notices and freshness", async ({ page }, testInfo) => {
+  const money = { windows: [], balanceUsd: { balance: 37.25, burn: null } };
+  const accounts = [
+    account("expired", { ...money, provider: "capy", label: "Capy", status: "expired", observedAt: now - 86_400_000 }),
+    account("error", { ...money, provider: "openrouter", label: "OpenRouter", status: "error", error: "Could not fetch balance" }),
+    account("stale", { ...money, provider: "opencode", label: "OpenCode", stale: true, notice: "Could not fetch balance" }),
+    account("old", { ...money, provider: "capy", label: "Capy", observedAt: now - 86_400_000 }),
+    account("healthy", { ...money, provider: "openrouter", label: "OpenRouter", observedAt: now - 30 * 60_000 }),
+  ];
+  await page.route("**/api/limits", (route) => route.fulfill({ json: { generatedAt: now, timezone: "Europe/Stockholm", accounts } }));
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Limits" }).click();
+  await page.clock.resume();
+  await expect(page.locator(".limits")).toHaveCSS("opacity", "1");
+  await page.locator(".limits").screenshot({ path: testInfo.outputPath("f7-balance-states.png") });
+  await expect(page.locator(".limits-balance")).toHaveCount(1);
+  await expect(page.locator('.limits-card[data-status="expired"] .limits-status')).toHaveText("session expired");
+  await expect(page.locator('.limits-card[data-status="expired"] .limits-age')).toHaveText("stale 24h");
+  await expect(page.locator('.limits-card[data-status="error"] .limits-error')).toHaveText("Could not fetch balance");
+  await expect(page.locator('.limits-card[data-provider="opencode"] .limits-notice')).toHaveText("Could not fetch balance");
+  await expect(page.locator('.limits-card[data-status="ok"] .limits-age--stale')).toHaveCount(2);
+  await expect(page.locator(".limits-balance .limits-age")).toHaveText("30m");
+});
+
+test("stale settable balances keep their notices and can be edited and saved", async ({ page }, testInfo) => {
+  const spendUsd = { credits: 12.50, total: 12.50, periodEnd: null, projection: { credits: null, total: null } };
+  const accounts = [
+    account("flagged", { provider: "capy", label: "Capy", windows: [], spendUsd, balanceUsd: { balance: 37.25, burn: null }, balanceSettable: true, stale: true, observedAt: now - 30 * 60_000, notice: "Could not fetch balance" }),
+    account("aged", { provider: "capy", label: "Capy", windows: [], spendUsd, balanceSettable: true, observedAt: now - 86_400_000, notice: "Could not fetch balance" }),
+  ];
+  const saved: { id: string; balanceUsd: number }[] = [];
+  await page.route("**/api/limits", (route) => route.fulfill({ json: { generatedAt: now, timezone: "Europe/Stockholm", accounts } }));
+  await page.route("**/api/limits/accounts/*/balance", async (route) => {
+    const id = route.request().url().split("/").at(-2)!;
+    const { balanceUsd } = route.request().postDataJSON();
+    expect(route.request().method()).toBe("POST");
+    saved.push({ id, balanceUsd });
+    accounts.find((a) => a.id === id)!.balanceUsd = { balance: balanceUsd, burn: null };
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Limits" }).click();
+  await page.clock.resume();
+  await expect(page.locator(".limits")).toHaveCSS("opacity", "1");
+  await page.locator(".limits").screenshot({ path: testInfo.outputPath("stale-settable.png") });
+  for (const [i, id] of ["aged", "flagged"].entries()) {
+    const row = page.locator(".limits-balance").nth(i);
+    await expect(row).toHaveAttribute("data-status", "ok");
+    await expect(row.getByRole("img", { name: "ok", exact: true })).toBeVisible();
+    await expect(row.locator(".limits-age--stale")).toHaveText(id === "aged" ? "stale 24h" : "stale 30m");
+    await expect(row.locator(".limits-notice")).toHaveText("Could not fetch balance");
+    await row.getByRole("button", { name: id === "aged" ? "set balance" : "$37.25 left", exact: true }).click();
+    await row.getByRole("textbox").fill("58.50");
+    if (i === 0) await page.locator(".limits").screenshot({ path: testInfo.outputPath("stale-settable-edit.png") });
+    await row.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(row.getByRole("button", { name: "$58.50 left", exact: true })).toBeVisible();
+    await expect(row.locator(".limits-notice")).toHaveText("Could not fetch balance");
+    await expect(row.locator(".limits-age--stale")).toBeVisible();
+  }
+  expect(saved).toEqual([{ id: "aged", balanceUsd: 58.50 }, { id: "flagged", balanceUsd: 58.50 }]);
+  await page.locator(".limits").screenshot({ path: testInfo.outputPath("stale-settable-saved.png") });
+});
+
+for (const width of [320, 390]) {
+  test(`account names and renewal chips wrap without overlapping status or age at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 700 });
+    await openLimits(page, [account("expired", {
+      status: "expired",
+      observedAt: now - 60_000,
+      plan: { name: "Max 20x", status: "active", renewsAt: null, canceledAt: null },
+      renewal: { kind: "ends", date: "2027-04-13" },
+    })]);
+    await page.clock.resume();
+    await expect(page.locator(".limits")).toHaveCSS("opacity", "1");
+    await page.locator(".limits").screenshot({ path: testInfo.outputPath(`f16-header-${width}.png`) });
+    const name = page.locator(".limits-name");
+    expect(await name.evaluate((el) => el.clientWidth >= el.scrollWidth)).toBe(true);
+    const age = await page.locator(".limits-head > .limits-age").boundingBox();
+    for (const selector of [".limits-name", ".limits-plan", ".limits-status"]) {
+      const box = await page.locator(selector).boundingBox();
+      expect(box).not.toBeNull();
+      expect(age).not.toBeNull();
+      expect(box!.width).toBeGreaterThan(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(age!.x);
+    }
+  });
+}

@@ -1455,6 +1455,7 @@ a {
 }
 .limits-nameline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -1491,12 +1492,14 @@ a {
 }
 .limits-name-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
   min-width: 0;
 }
 .limits-plan {
   flex-shrink: 0;
+  max-width: 100%;
   padding: 0 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -1505,7 +1508,7 @@ a {
   font-weight: 600;
   line-height: 15px;
   color: var(--muted);
-  white-space: nowrap;
+  white-space: normal;
 }
 .limits-email {
   overflow: hidden;
@@ -1642,6 +1645,10 @@ a {
 .limits-balance .limits-email {
   grid-column: 2;
 }
+.limits-balance > .limits-age {
+  grid-column: 3;
+  grid-row: 2;
+}
 .limits-balance-amount,
 .limits-balance-set,
 .limits-balance-form {
@@ -1671,6 +1678,9 @@ a {
   line-height: 15px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+.limits-balance > .limits-notice {
+  grid-column: 2 / -1;
 }
 .limits-api-balance {
   display: grid;
