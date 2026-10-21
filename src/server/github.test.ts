@@ -75,14 +75,14 @@ function routes(overrides: Record<string, Reply> = {}): Record<string, Reply> {
 describe("GithubSource", () => {
   test("stars come from WatchEvents and forks from the forks API; pushes, PRs and the owner's own stars never show", async () => {
     const gh = fakeGithub(routes());
-    const feed = await new GithubSource(freshDb(), "me", undefined, gh.fetchImpl).get(now);
+    const feed = await new GithubSource(freshDb(), "me", "tok", gh.fetchImpl).get(now);
 
     expect(feed.repos.map((r) => r.name)).toEqual(["paint", "quiet"]);
     expect(feed.events.map((e) => `${e.kind} ${e.login}`)).toEqual(["star uma", "fork forker", "star vic"]);
     expect(feed.events[0]!.name).toBe("Uma Ray");
     expect(feed.starsUnavailable).toBe(false);
     expect(gh.paths().some((p) => p!.endsWith("/stargazers"))).toBe(false);
-    expect(gh.calls.some((c) => "Authorization" in c.headers)).toBe(false);
+    expect(gh.calls.every((c) => c.headers.Authorization === "Bearer tok")).toBe(true);
   });
 
   test("events are stored once by GitHub id and outlive the repo events window", async () => {
@@ -104,6 +104,76 @@ describe("GithubSource", () => {
     expect(feed.events.filter((e) => e.kind === "star").map((e) => e.login)).toEqual(["wes", "uma", "vic"]);
   });
 
+  test("fork pagination reads past 100 recent forks and stops at the count, time or known-history boundary", async () => {
+    for (const boundary of ["short", "count", "time", "known"]) {
+      const db = freshDb();
+      const forks = Array.from({ length: 100 }, (_, i) => ({ id: i, created_at: iso(now - i * 60_000), owner: { login: `forker${i}`, avatar_url: "" } }));
+      if (boundary === "time") forks[99]!.created_at = iso(now - 31 * DAY);
+      if (boundary === "known") {
+        await db.insert(githubEvents).values({ id: "fork:99", kind: "fork", repo: "paint", login: "forker99", avatarUrl: "", at: now - 99 * 60_000 });
+      }
+      const gh = fakeGithub(routes({
+        "/repos/me/paint/forks": ({ path }) => json(path.includes("page=2") ? [
+          { id: 100, created_at: iso(now - 100 * 60_000), owner: { login: "last-forker", avatar_url: "" } },
+          ...(boundary === "count" ? Array.from({ length: 99 }, (_, i) => ({ id: 101 + i, created_at: iso(now - (101 + i) * 60_000), owner: { login: `extra${i}`, avatar_url: "" } })) : []),
+        ] : forks, { link: '</repos/me/paint/forks?sort=newest&per_page=100&page=2>; rel="next"' }),
+      }));
+      const feed = await new GithubSource(db, "me", "tok", gh.fetchImpl).get(now);
+      const requests = gh.calls.filter((c) => c.path.startsWith("/repos/me/paint/forks"));
+      expect(requests.length).toBe(boundary === "time" || boundary === "known" ? 1 : 2);
+      expect(feed.events.some((e) => e.login === "last-forker")).toBe(boundary === "short" || boundary === "count");
+      expect((await db.select().from(githubEvents)).filter((e) => e.kind === "fork").length).toBe(boundary === "count" ? 200 : boundary === "short" ? 101 : boundary === "time" ? 99 : 100);
+    }
+  });
+
+  test("forks are conditionally polled even when a deleted fork is replaced at the same total", async () => {
+    let login = "first-forker";
+    const gh = fakeGithub(routes({
+      "/repos/me/paint/forks": () => json([{ id: login === "first-forker" ? 1 : 2, created_at: iso(now), owner: { login, avatar_url: "" } }], { etag: `"${login}"` }),
+    }));
+    const source = new GithubSource(freshDb(), "me", "tok", gh.fetchImpl);
+    await source.get(now);
+    login = "replacement-forker";
+    const second = await source.get(now + 11 * 60_000);
+    const third = await source.get(now + 22 * 60_000);
+    expect(second.events.filter((e) => e.kind === "fork").map((e) => e.login).sort()).toEqual(["first-forker", "replacement-forker"]);
+    expect(third.events).toEqual(second.events);
+    expect(gh.calls.filter((c) => c.path.startsWith("/repos/me/paint/forks")).map((c) => c.headers["If-None-Match"])).toEqual([undefined, '"first-forker"', '"replacement-forker"']);
+  });
+
+  test("a full new page without stars does not hide stars on the following page", async () => {
+    let initial = true;
+    const gh = fakeGithub(routes({
+      "/repos/me/paint/events": ({ path }) => json(initial ? [watch("known", "known-person", now - DAY)] : path.endsWith("&page=1")
+        ? Array.from({ length: 100 }, (_, i) => ({ ...watch(`push${i}`, "me", now), type: "PushEvent" }))
+        : [watch("new", "new-person", now), watch("known", "known-person", now - DAY), ...Array.from({ length: 98 }, (_, i) => ({ ...watch(`older-push${i}`, "me", now - DAY), type: "PushEvent" }))]),
+    }));
+    const source = new GithubSource(freshDb(), "me", "tok", gh.fetchImpl);
+    await source.get(now);
+    initial = false;
+    const before = gh.calls.length;
+    const feed = await source.get(now + 11 * 60_000);
+    expect(feed.events.filter((e) => e.kind === "star").map((e) => e.login)).toEqual(["new-person", "known-person"]);
+    expect(gh.calls.slice(before).filter((c) => c.path.startsWith("/repos/me/paint/events")).map((c) => c.path)).toEqual([
+      "/repos/me/paint/events?per_page=100&page=1",
+      "/repos/me/paint/events?per_page=100&page=2",
+    ]);
+  });
+
+  test("a later re-star is stored by event id even for an existing login or legacy backfill", async () => {
+    const db = freshDb();
+    await db.insert(githubEvents).values([
+      { id: "old", kind: "star", repo: "paint", login: "returning", avatarUrl: "", at: now - 31 * DAY },
+      { id: "web:paint:legacy", kind: "star", repo: "paint", login: "legacy", avatarUrl: "", at: now - 31 * DAY },
+    ]);
+    const gh = fakeGithub(routes({ "/repos/me/paint/events": json([watch("new", "returning", now), watch("new-legacy", "legacy", now), watch("same-day", "returning", now - 60_000)]) }));
+    const source = new GithubSource(db, "me", "tok", gh.fetchImpl);
+    const feed = await source.get(now);
+    await source.get(now + 11 * 60_000);
+    expect(feed.events.filter((e) => e.kind === "star").map((e) => e.login).sort()).toEqual(["legacy", "returning", "returning"]);
+    expect((await db.select().from(githubEvents)).map((e) => e.id).sort()).toEqual(["fork:77", "new", "new-legacy", "old", "same-day", "web:paint:legacy"]);
+  });
+
   test("polls are conditional: a 304 changes nothing, and X-Poll-Interval holds a repo's events back", async () => {
     const gh = fakeGithub(
       routes({
@@ -119,7 +189,8 @@ describe("GithubSource", () => {
 
     const second = await source.get(now + 11 * 60_000);
     const later = gh.calls.slice(before);
-    expect(later.map((c) => c.path.split("?")[0])).toEqual(["/users/me/repos", "/repos/me/quiet/events"]);
+    expect(later.map((c) => c.path.split("?")[0])).toEqual(["/users/me/repos", "/repos/me/paint/forks", "/repos/me/quiet/events"]);
+    expect(later[1]!.headers["If-None-Match"]).toBe('"forks"');
     expect(later[0]!.headers["If-None-Match"]).toBe('"repos"');
     expect(later[0]!.headers.Authorization).toBe("Bearer tok");
     expect(second.events).toEqual(first.events);
@@ -198,13 +269,13 @@ describe("GithubSource", () => {
   test("without a feed yet, a rate limit is a clear error; with one, the stored feed is served", async () => {
     const limited = (() =>
       new Response("{}", { status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(Math.floor((Date.now() + 30 * 60_000) / 1000)) } })) as Reply;
-    const error = await new GithubSource(freshDb(), "me", undefined, fakeGithub({ "/": limited }).fetchImpl).get(now).catch((e) => e);
+    const error = await new GithubSource(freshDb(), "me", "tok", fakeGithub({ "/": limited }).fetchImpl).get(now).catch((e) => e);
     expect(error).toBeInstanceOf(GithubUnavailable);
     expect(error.message).toStartWith("GitHub rate limit reached, resets in");
 
     const db = freshDb();
     const gh = fakeGithub(routes());
-    const source = new GithubSource(db, "me", undefined, gh.fetchImpl);
+    const source = new GithubSource(db, "me", "tok", gh.fetchImpl);
     const feed = await source.get(now);
     (source as unknown as { fetchImpl: typeof fetch }).fetchImpl = fakeGithub({ "/": limited }).fetchImpl;
     expect((await source.get(now + 11 * 60_000)).events).toEqual(feed.events);

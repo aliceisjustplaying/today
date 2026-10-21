@@ -26,6 +26,7 @@ beforeAll(() => {
     GOOGLE_OAUTH_CLIENT_SECRET: "client-secret",
     SESSION_SECRET: "session-secret",
     LINEAR_API_KEY: "lin_api_test",
+    GITHUB_TOKEN: "github-test",
     STATIC_DIR: staticDir,
   });
   const db = openDb(":memory:");
@@ -48,9 +49,16 @@ async function sessionCookie() {
 }
 
 describe("config", () => {
+  test("requires a read-only GitHub token before automatic polling can start", () => {
+    const base = { ALLOWED_EMAIL: "me@example.com", GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", SESSION_SECRET: "s", LINEAR_API_KEY: "k" };
+    expect(() => loadConfig(base)).toThrow("GITHUB_TOKEN");
+    expect(() => loadConfig({ ...base, GITHUB_TOKEN: "  " })).toThrow("GITHUB_TOKEN");
+    expect(loadConfig({ ...base, GITHUB_TOKEN: " tok " }).GITHUB_TOKEN).toBe("tok");
+  });
+
   test("fails fast on missing required env", () => {
     expect(() => loadConfig({ ALLOWED_EMAIL: "me@example.com" })).toThrow(
-      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET, LINEAR_API_KEY or LINEAR_API_KEYS",
+      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SECRET, GITHUB_TOKEN, LINEAR_API_KEY or LINEAR_API_KEYS",
     );
   });
 
@@ -60,6 +68,7 @@ describe("config", () => {
       GOOGLE_OAUTH_CLIENT_ID: "id",
       GOOGLE_OAUTH_CLIENT_SECRET: "secret",
       SESSION_SECRET: "s",
+      GITHUB_TOKEN: "tok",
     };
     expect(loadConfig({ ...base, LINEAR_API_KEY: "one" }).LINEAR_API_KEYS).toEqual(["one"]);
     expect(
@@ -70,7 +79,7 @@ describe("config", () => {
   });
 
   test("TIMEZONE defaults to the server's own zone", () => {
-    const base = { ALLOWED_EMAIL: "me@example.com", GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", SESSION_SECRET: "s", LINEAR_API_KEY: "k" };
+    const base = { ALLOWED_EMAIL: "me@example.com", GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", SESSION_SECRET: "s", LINEAR_API_KEY: "k", GITHUB_TOKEN: "tok" };
     expect(loadConfig(base).TIMEZONE).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
     expect(loadConfig({ ...base, TIMEZONE: "Asia/Tokyo" }).TIMEZONE).toBe("Asia/Tokyo");
   });
