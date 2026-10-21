@@ -31,7 +31,7 @@ export function SignedIn() {
     getCached<ReturnsResponse>("returns.linear"),
   );
   const [completing, setCompleting] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<"now" | "tasks" | "returns" | "prep" | "close", string>>>({});
   const [prepSheet, setPrepSheet] = useState<"edit" | "history" | null>(null);
 
   const loadNow = useCallback(async () => {
@@ -46,9 +46,9 @@ export function SignedIn() {
       if (await supersededByDeploy()) return;
       setNow(data);
       setCached("now.v2", data);
-      setError(null);
+      setErrors((prev) => ({ ...prev, now: undefined }));
     } catch (e) {
-      setError(String(e));
+      setErrors((prev) => ({ ...prev, now: String(e) }));
     }
   }, []);
 
@@ -64,8 +64,9 @@ export function SignedIn() {
       if (await supersededByDeploy()) return;
       setTasks(data);
       setCached("tasks.linear.v2", data);
+      setErrors((prev) => ({ ...prev, tasks: undefined }));
     } catch (e) {
-      setError(String(e));
+      setErrors((prev) => ({ ...prev, tasks: String(e) }));
     }
   }, []);
 
@@ -95,8 +96,9 @@ export function SignedIn() {
       if (await supersededByDeploy()) return;
       setReturns(data);
       setCached("returns.linear", data);
+      setErrors((prev) => ({ ...prev, returns: undefined }));
     } catch (e) {
-      setError(String(e));
+      setErrors((prev) => ({ ...prev, returns: String(e) }));
     }
   }, []);
 
@@ -148,8 +150,9 @@ export function SignedIn() {
         });
         if (!r.ok) throw new Error(`prep ${r.status}`);
         applyPrep((await r.json()) as PrepToday);
+        setErrors((prev) => ({ ...prev, prep: undefined }));
       } catch (e) {
-        setError(String(e));
+        setErrors((prev) => ({ ...prev, prep: String(e) }));
         loadNow();
       }
     },
@@ -188,9 +191,10 @@ export function SignedIn() {
           return;
         }
         if (!r.ok) throw new Error(`close ${r.status}`);
-        await loadTasks();
+        setErrors((prev) => ({ ...prev, close: undefined }));
+        await Promise.all([loadTasks(), loadReturns()]);
       } catch (e) {
-        setError(String(e));
+        setErrors((prev) => ({ ...prev, close: String(e) }));
       } finally {
         setCompleting((prev) => {
           const next = new Set(prev);
@@ -199,7 +203,7 @@ export function SignedIn() {
         });
       }
     },
-    [loadTasks],
+    [loadTasks, loadReturns],
   );
 
   const onLogout = useCallback(() => {
@@ -248,7 +252,13 @@ export function SignedIn() {
         <TaskTabs tasks={tasks} completing={completing} onComplete={onCompleteTask} />
         <Returns returns={returns} />
 
-        {error && <div className="error-toast">{privacy ? maskInline(error) : error}</div>}
+        {Object.values(errors).some(Boolean) && (
+          <div className="error-toast">
+            {Object.entries(errors).map(([source, error]) => error && (
+              <div key={source}>{privacy ? maskInline(error) : error}</div>
+            ))}
+          </div>
+        )}
 
         {prepSheet && now && (
           <PrepSheet
