@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import type { PrepHistory, PrepStep, PrepStepDraft } from "./types";
 import { formatTime } from "./format";
 import { usePrivacy } from "./privacy";
@@ -11,7 +12,13 @@ type Props = {
   onClose: () => void;
 };
 
+type Draft = (PrepStepDraft & { key: string })[];
+
 export function PrepSheet({ view, steps, onView, onSave, onClose }: Props) {
+  const [draft, setDraft] = useState<Draft>(() =>
+    steps.map((s) => ({ id: s.id, label: s.label, minutes: s.minutes, key: String(s.id) })),
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -41,16 +48,14 @@ export function PrepSheet({ view, steps, onView, onSave, onClose }: Props) {
             ×
           </button>
         </div>
-        {view === "edit" ? <EditSteps steps={steps} onSave={onSave} onClose={onClose} /> : <History />}
+        {view === "edit" ? <EditSteps draft={draft} setDraft={setDraft} onSave={onSave} onClose={onClose} /> : <History />}
       </div>
     </div>
   );
 }
 
-function EditSteps({ steps, onSave, onClose }: { steps: PrepStep[]; onSave: Props["onSave"]; onClose: () => void }) {
-  const [draft, setDraft] = useState<(PrepStepDraft & { key: string })[]>(() =>
-    steps.map((s) => ({ id: s.id, label: s.label, minutes: s.minutes, key: String(s.id) })),
-  );
+function EditSteps({ draft, setDraft, onSave, onClose }: { draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; onSave: Props["onSave"]; onClose: () => void }) {
+  const p = usePrivacy();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +71,21 @@ function EditSteps({ steps, onSave, onClose }: { steps: PrepStep[]; onSave: Prop
 
   const total = draft.reduce((sum, s) => sum + s.minutes, 0);
   const invalid = draft.some((s) => !s.label.trim());
+
+  if (p.on) {
+    return (
+      <table className="prep-avg">
+        <tbody>
+          {draft.map((s) => (
+            <tr key={s.key}>
+              <th scope="row">{p.decoy("prep", s.id ?? s.key, s.label)}</th>
+              <td className="prep-avg-time">{s.minutes}m</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
 
   const save = async () => {
     setSaving(true);
